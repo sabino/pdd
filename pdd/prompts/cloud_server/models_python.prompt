@@ -1,0 +1,16 @@
+% Generate pdd/cloud_server/models.py with Pydantic request models.
+
+Use camelCase aliases, populate_by_name, extra=forbid, and JsonValue for arbitrary JSON.
+Keep snake_case internal fields. Follow the exact fields in the HTTP contract.
+Bound session/command IDs and command types to 128 characters, project paths to 4096,
+session names to 256, language to 128, and example search input to one million.
+Validate strength 0..1, temperature 0..2, time 0..1 or null, with finite numbers only.
+Defaults: strength .5, temperature 0, time .25, verbose false, language python.
+GenerateTest requires exactly one codeContent/example in generate mode.
+Increase mode requires codeContent, existingTests, and coverageReport.
+LLMInvoke requires prompt or messages; accept prompt inputs or batches and message batches.
+Accept outputSchema, useBatchMode, and optional language.
+Command payload.args and payload.options must be JSON objects when present.
+CommandUpdate only accepts processing, completed, failed, or cancelled.
+
+<include>docs/cloud-server-api.md</include>

@@ -14,6 +14,7 @@ from rich.traceback import install
 from .firecrawl_cache import get_firecrawl_cache
 from pdd.path_resolution import get_default_resolver
 from pdd.sync_core.includes import include_paths
+from pdd.core.execution import is_server_execution
 
 install()
 console = Console()
@@ -305,6 +306,10 @@ def preprocess(
 ) -> str:
     if exclude_keys is None:
         exclude_keys = exclude
+    # Clients expand resources locally. A hosted inference request must not read or execute them again.
+    if is_server_execution():
+        text = str(prompt)
+        return double_curly(text, exclude_keys) if double_curly_brackets else text
     try:
         # Some tests patch template loading to return mock objects with .format().
         # In that case preprocessing is not applicable; return as string.

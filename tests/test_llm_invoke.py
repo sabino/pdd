@@ -3887,12 +3887,11 @@ def test_cloud_enabled_detection():
 
 # --- Issue #348: Auth Status Mismatch Tests ---
 
-def test_llm_invoke_cloud_401_clears_jwt_cache():
+def test_llm_invoke_cloud_401_preserves_identity_cache():
     """
-    Issue #348: When cloud returns 401, JWT cache should be cleared.
+    A rejected bearer token must not clear an unrelated identity cache.
 
-    This prevents repeated failures when the cached JWT is stale.
-    The user should be prompted to re-authenticate.
+    Direct the operator to the configured server token instead.
     """
     with patch("pdd.core.cloud.CloudConfig") as mock_config:
         mock_config.is_cloud_enabled.return_value = True
@@ -3930,19 +3929,17 @@ def test_llm_invoke_cloud_401_clears_jwt_cache():
                             language=None,
                         )
 
-                    # Verify JWT cache was cleared
-                    mock_clear_cache.assert_called_once()
+                    # Preserve unrelated identity caches.
+                    mock_clear_cache.assert_not_called()
 
                     # Verify error message is helpful
-                    assert "Authentication expired" in str(exc_info.value)
-                    assert "pdd auth logout && pdd auth login" in str(exc_info.value)
+                    assert "Authentication failed" in str(exc_info.value)
+                    assert "PDD_CLOUD_TOKEN" in str(exc_info.value)
 
 
-def test_llm_invoke_cloud_403_clears_jwt_cache():
+def test_llm_invoke_cloud_403_preserves_identity_cache():
     """
-    Issue #348: 403 Forbidden should also clear JWT cache.
-
-    This handles cases where the token is revoked or invalid.
+    A forbidden bearer token must preserve unrelated identity caches.
     """
     with patch("pdd.core.cloud.CloudConfig") as mock_config:
         mock_config.is_cloud_enabled.return_value = True
@@ -3978,8 +3975,8 @@ def test_llm_invoke_cloud_403_clears_jwt_cache():
                             language=None,
                         )
 
-                    # Verify JWT cache was cleared for 403 too
-                    mock_clear_cache.assert_called_once()
+                    # Preserve unrelated identity caches.
+                    mock_clear_cache.assert_not_called()
 
 
 def test_llm_invoke_cloud_401_error_message_contains_server_error():

@@ -1,7 +1,7 @@
 % You are an expert Python engineer. Your goal is to write `pdd/commands/sessions.py`.
 
 % Role & Scope
-  This module provides CLI commands for managing remote PDD sessions registered with PDD Cloud.
+  This module manages remote PDD sessions registered with the configured self-hosted service.
   It allows users to list, inspect, and cleanup remote sessions that were registered via `pdd connect`.
 
 <include>context/python_preamble.prompt</include>
@@ -41,7 +41,8 @@
   - Use rich.console.Console for output
   - Use rich.table.Table for tabular display
   - Handle Pydantic v1/v2 and dataclass objects (model_dump, dict, __dict__)
-  - Get JWT token via CloudConfig.get_jwt_token()
+  - Get the configured bearer token via the legacy CloudConfig.get_jwt_token() method.
+  - Missing credentials instruct users to set PDD_CLOUD_URL and PDD_CLOUD_TOKEN or PDD_CLOUD_TOKEN_FILE.
 
 % Deliverables
   - Code: `pdd/commands/sessions.py`

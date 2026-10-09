@@ -1,0 +1,2224 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PDD self-hosted server",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Get Health",
+        "operationId": "get_health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Get Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getCreditBalance": {
+      "get": {
+        "summary": "Get Credit Balance",
+        "operationId": "get_credit_balance_getCreditBalance_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Get Credit Balance Getcreditbalance Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/registerSession": {
+      "post": {
+        "summary": "Register Session",
+        "operationId": "register_session_registerSession_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterSession"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "title": "Response Register Session Registersession Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/listSessions": {
+      "get": {
+        "summary": "List Sessions",
+        "operationId": "list_sessions_listSessions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": {
+                        "$ref": "#/components/schemas/JsonValue"
+                      },
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "type": "object",
+                  "title": "Response List Sessions Listsessions Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/heartbeatSession": {
+      "post": {
+        "summary": "Heartbeat Session",
+        "operationId": "heartbeat_session_heartbeatSession_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Heartbeat Session Heartbeatsession Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/deregisterSession": {
+      "post": {
+        "summary": "Deregister Session",
+        "operationId": "deregister_session_deregisterSession_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Deregister Session Deregistersession Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/submitCommand": {
+      "post": {
+        "summary": "Submit Command",
+        "operationId": "submit_command_submitCommand_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "title": "Response Submit Command Submitcommand Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getCommands": {
+      "get": {
+        "summary": "Get Commands",
+        "operationId": "get_commands_getCommands_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "title": "Sessionid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "$ref": "#/components/schemas/JsonValue"
+                      }
+                    }
+                  },
+                  "title": "Response Get Commands Getcommands Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getCommandStatus": {
+      "get": {
+        "summary": "Get Command Status",
+        "operationId": "get_command_status_getCommandStatus_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "title": "Sessionid"
+            }
+          },
+          {
+            "name": "commandId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "title": "Commandid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "$ref": "#/components/schemas/JsonValue"
+                    }
+                  },
+                  "title": "Response Get Command Status Getcommandstatus Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/updateCommand": {
+      "post": {
+        "summary": "Update Command",
+        "operationId": "update_command_updateCommand_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Update Command Updatecommand Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/cancelCommand": {
+      "post": {
+        "summary": "Cancel Command",
+        "operationId": "cancel_command_cancelCommand_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandReference"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Cancel Command Cancelcommand Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/submitExample": {
+      "post": {
+        "summary": "Submit Example",
+        "operationId": "submit_example_submitExample_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExampleSubmission"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Submit Example Submitexample Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/listExamples": {
+      "get": {
+        "summary": "List Examples",
+        "operationId": "list_examples_listExamples_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "$ref": "#/components/schemas/JsonValue"
+                      }
+                    }
+                  },
+                  "title": "Response List Examples Listexamples Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/searchExamples": {
+      "get": {
+        "summary": "Search Examples",
+        "operationId": "search_examples_searchExamples_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192,
+              "title": "Query"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Language"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10,
+              "minimum": 1,
+              "default": 3,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "$ref": "#/components/schemas/JsonValue"
+                      }
+                    }
+                  },
+                  "title": "Response Search Examples Searchexamples Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/generateCode": {
+      "post": {
+        "summary": "Generate Code",
+        "operationId": "generate_code_generateCode_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateCode"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Generate Code Generatecode Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/generateExample": {
+      "post": {
+        "summary": "Generate Example",
+        "operationId": "generate_example_generateExample_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateExample"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Generate Example Generateexample Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/generateTest": {
+      "post": {
+        "summary": "Generate Test",
+        "operationId": "generate_test_generateTest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateTest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Generate Test Generatetest Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/generateBugTest": {
+      "post": {
+        "summary": "Generate Bug Test",
+        "operationId": "generate_bug_test_generateBugTest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateBugTest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Generate Bug Test Generatebugtest Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/fixCode": {
+      "post": {
+        "summary": "Fix Code",
+        "operationId": "fix_code_fixCode_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixCode"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Fix Code Fixcode Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/crashCode": {
+      "post": {
+        "summary": "Crash Code",
+        "operationId": "crash_code_crashCode_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrashCode"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Crash Code Crashcode Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/verifyCode": {
+      "post": {
+        "summary": "Verify Code",
+        "operationId": "verify_code_verifyCode_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyCode"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Verify Code Verifycode Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/llmInvoke": {
+      "post": {
+        "summary": "Llm Invoke",
+        "operationId": "llm_invoke_llmInvoke_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LLMInvoke"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object",
+                  "title": "Response Llm Invoke Llminvoke Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/trackUsage": {
+      "post": {
+        "summary": "Reject Reserved Contract",
+        "operationId": "reject_reserved_contract_trackUsage_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/syncState": {
+      "post": {
+        "summary": "Reject Reserved Contract",
+        "operationId": "reject_reserved_contract_syncState_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Redirect Dashboard",
+        "operationId": "redirect_dashboard__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cloud": {
+      "get": {
+        "summary": "Serve Dashboard",
+        "operationId": "serve_dashboard_cloud_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/connect/{session_id}": {
+      "get": {
+        "summary": "Serve Session Dashboard",
+        "operationId": "serve_session_dashboard_connect__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logo.svg": {
+      "get": {
+        "summary": "Serve Logo",
+        "operationId": "serve_logo_logo_svg_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CommandReference": {
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Sessionid"
+          },
+          "commandId": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Commandid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sessionId",
+          "commandId"
+        ],
+        "title": "CommandReference"
+      },
+      "CommandRequest": {
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Sessionid"
+          },
+          "type": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Type"
+          },
+          "payload": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Payload"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sessionId",
+          "type"
+        ],
+        "title": "CommandRequest"
+      },
+      "CommandUpdate": {
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Sessionid"
+          },
+          "commandId": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Commandid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "completed",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "response": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sessionId",
+          "commandId",
+          "status"
+        ],
+        "title": "CommandUpdate"
+      },
+      "CrashCode": {
+        "properties": {
+          "strength": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Strength",
+            "default": 0.5
+          },
+          "temperature": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Temperature",
+            "default": 0
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time",
+            "default": 0.25
+          },
+          "verbose": {
+            "type": "boolean",
+            "title": "Verbose",
+            "default": false
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Language",
+            "default": "python"
+          },
+          "programContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Programcontent"
+          },
+          "promptContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Promptcontent"
+          },
+          "codeContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Codecontent"
+          },
+          "errorContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Errorcontent"
+          },
+          "programPath": {
+            "type": "string",
+            "title": "Programpath",
+            "default": ""
+          },
+          "codePath": {
+            "type": "string",
+            "title": "Codepath",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "programContent",
+          "promptContent",
+          "codeContent",
+          "errorContent"
+        ],
+        "title": "CrashCode"
+      },
+      "ExampleSubmission": {
+        "properties": {
+          "command": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Command"
+          },
+          "searchInput": {
+            "type": "string",
+            "maxLength": 1000000,
+            "title": "Searchinput",
+            "default": ""
+          },
+          "input": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Input"
+          },
+          "output": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Output"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "command",
+          "input",
+          "output"
+        ],
+        "title": "ExampleSubmission"
+      },
+      "FixCode": {
+        "properties": {
+          "strength": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Strength",
+            "default": 0.5
+          },
+          "temperature": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Temperature",
+            "default": 0
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time",
+            "default": 0.25
+          },
+          "verbose": {
+            "type": "boolean",
+            "title": "Verbose",
+            "default": false
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Language",
+            "default": "python"
+          },
+          "unitTest": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Unittest"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Code"
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "errors": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Errors"
+          },
+          "protectTests": {
+            "type": "boolean",
+            "title": "Protecttests",
+            "default": false
+          },
+          "codeFileExt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codefileext"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unitTest",
+          "code",
+          "prompt",
+          "errors"
+        ],
+        "title": "FixCode"
+      },
+      "GenerateBugTest": {
+        "properties": {
+          "strength": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Strength",
+            "default": 0.5
+          },
+          "temperature": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Temperature",
+            "default": 0
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time",
+            "default": 0.25
+          },
+          "verbose": {
+            "type": "boolean",
+            "title": "Verbose",
+            "default": false
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Language",
+            "default": "python"
+          },
+          "promptContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Promptcontent"
+          },
+          "codeContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Codecontent"
+          },
+          "programContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Programcontent"
+          },
+          "currentOutput": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Currentoutput"
+          },
+          "desiredOutput": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Desiredoutput"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "promptContent",
+          "codeContent",
+          "programContent",
+          "currentOutput",
+          "desiredOutput"
+        ],
+        "title": "GenerateBugTest"
+      },
+      "GenerateCode": {
+        "properties": {
+          "strength": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Strength",
+            "default": 0.5
+          },
+          "temperature": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Temperature",
+            "default": 0
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time",
+            "default": 0.25
+          },
+          "verbose": {
+            "type": "boolean",
+            "title": "Verbose",
+            "default": false
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Language",
+            "default": "python"
+          },
+          "promptContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Promptcontent"
+          },
+          "searchInput": {
+            "type": "string",
+            "title": "Searchinput",
+            "default": ""
+          },
+          "compress": {
+            "type": "boolean",
+            "title": "Compress",
+            "default": false
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "promptContent"
+        ],
+        "title": "GenerateCode"
+      },
+      "GenerateExample": {
+        "properties": {
+          "strength": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Strength",
+            "default": 0.5
+          },
+          "temperature": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Temperature",
+            "default": 0
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time",
+            "default": 0.25
+          },
+          "verbose": {
+            "type": "boolean",
+            "title": "Verbose",
+            "default": false
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Language",
+            "default": "python"
+          },
+          "promptContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Promptcontent"
+          },
+          "codeContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Codecontent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "promptContent",
+          "codeContent"
+        ],
+        "title": "GenerateExample"
+      },
+      "GenerateTest": {
+        "properties": {
+          "strength": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Strength",
+            "default": 0.5
+          },
+          "temperature": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Temperature",
+            "default": 0
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time",
+            "default": 0.25
+          },
+          "verbose": {
+            "type": "boolean",
+            "title": "Verbose",
+            "default": false
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Language",
+            "default": "python"
+          },
+          "promptContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Promptcontent"
+          },
+          "codeContent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codecontent"
+          },
+          "example": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Example"
+          },
+          "existingTests": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Existingtests"
+          },
+          "coverageReport": {
+            "type": "string",
+            "title": "Coveragereport",
+            "default": ""
+          },
+          "sourceFilePath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcefilepath"
+          },
+          "testFilePath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Testfilepath"
+          },
+          "moduleName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modulename"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "generate",
+              "increase"
+            ],
+            "title": "Mode",
+            "default": "generate"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "promptContent"
+        ],
+        "title": "GenerateTest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "JsonValue": {},
+      "LLMInvoke": {
+        "properties": {
+          "strength": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Strength",
+            "default": 0.5
+          },
+          "temperature": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Temperature",
+            "default": 0
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time",
+            "default": 0.25
+          },
+          "verbose": {
+            "type": "boolean",
+            "title": "Verbose",
+            "default": false
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Language",
+            "default": "python"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt"
+          },
+          "inputJson": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "items": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inputjson"
+          },
+          "messages": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/JsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "items": {
+                    "additionalProperties": {
+                      "$ref": "#/components/schemas/JsonValue"
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Messages"
+          },
+          "outputSchema": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outputschema"
+          },
+          "useBatchMode": {
+            "type": "boolean",
+            "title": "Usebatchmode",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LLMInvoke"
+      },
+      "RegisterSession": {
+        "properties": {
+          "projectPath": {
+            "type": "string",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Projectpath"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Metadata"
+          },
+          "sessionName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sessionname"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "projectPath"
+        ],
+        "title": "RegisterSession"
+      },
+      "SessionRequest": {
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Sessionid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sessionId"
+        ],
+        "title": "SessionRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VerifyCode": {
+        "properties": {
+          "strength": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Strength",
+            "default": 0.5
+          },
+          "temperature": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Temperature",
+            "default": 0
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time",
+            "default": 0.25
+          },
+          "verbose": {
+            "type": "boolean",
+            "title": "Verbose",
+            "default": false
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Language",
+            "default": "python"
+          },
+          "programContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Programcontent"
+          },
+          "promptContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Promptcontent"
+          },
+          "codeContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Codecontent"
+          },
+          "outputContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Outputcontent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "programContent",
+          "promptContent",
+          "codeContent",
+          "outputContent"
+        ],
+        "title": "VerifyCode"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

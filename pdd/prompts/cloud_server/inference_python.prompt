@@ -1,0 +1,16 @@
+% Generate pdd/cloud_server/inference.py to adapt HTTP requests to PDD core functions.
+
+Use existing code_generator, context_generator, generate_test, increase_tests,
+bug_to_unit_test, fix_errors_from_unit_tests, fix_code_module_errors,
+fix_verification_errors, and llm_invoke. Preserve response keys from the HTTP contract.
+Run within server_execution() and model_override_scope(request.model for GenerateCode).
+Never mutate a global model environment variable per request.
+Force llm_invoke use_cloud=false, prevent interactive credential acquisition,
+and keep client include/shell/web directives as literal text.
+Normalize null time to .25. Fail when generation returns empty content or an error model.
+Use a temporary directory for fix analysis logs; accept no remote filesystem output paths.
+Append owner-visible reference examples for generateCode and prompt-mode llmInvoke.
+Return examplesUsed with real IDs/module names and titles; invent no scores or hashes.
+Keep generation costs as provider-reported costs. Do not implement billing or credit deduction.
+
+<include>docs/cloud-server-api.md</include>

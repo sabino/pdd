@@ -10,7 +10,6 @@ from rich.console import Console
 from rich.panel import Panel
 
 import requests
-import asyncio
 import os
 from pathlib import Path
 
@@ -21,7 +20,6 @@ from .config_resolution import resolve_effective_config
 from .construct_paths import construct_paths
 from .fix_errors_from_unit_tests import fix_errors_from_unit_tests
 from .fix_error_loop import fix_error_loop, run_pytest_on_file
-from .get_jwt_token import get_jwt_token
 from .get_language import get_language
 from .core.cloud import CloudConfig, get_cloud_timeout, get_cloud_request_timeout
 from .mock_contract_validation import (
@@ -630,53 +628,18 @@ def fix_main(
                 if output_file_paths.get("output_results"):
                     rprint(f"  Results file: {output_file_paths['output_results']}")
 
-                # Auto-submit example if requested and successful.
-                # Headless Cloud Run / Cloud Functions executors cannot
-                # complete the interactive Device Flow JWT request, so the
-                # whole branch is skipped when running inside one — the
-                # asyncio call would otherwise block until the auth window
-                # expires (~5 min) and eat the rest of the fix budget.
+                # Keep server-side requests from recursively uploading examples.
                 _skip_cloud_auto_submit = CloudConfig.is_running_in_cloud()
                 if auto_submit and _skip_cloud_auto_submit and not ctx.obj.get("quiet", False):
-                    rprint("[yellow]Skipping example submission: cloud executor has no interactive auth path.[/yellow]")
+                    rprint("[yellow]Skipping example submission inside the server.[/yellow]")
                 if (
                     auto_submit
                     and not _env_flag_enabled("PDD_FORCE_LOCAL")
                     and not _skip_cloud_auto_submit
+                    and CloudConfig.is_server_configured()
                 ):
-                    # Bound the JWT auth call as a safety net only — cache
-                    # hits and refresh-token renewals return in under a
-                    # second, but honest first-time interactive Device Flow
-                    # needs minutes for the user to visit GitHub and
-                    # authorise. Default of 300s (5 min) keeps interactive
-                    # `pdd fix --auto-submit` users working while still
-                    # catching truly wedged auths. Defensive parse: a
-                    # malformed env value must not turn a successful fix
-                    # into a failure via the outer `except Exception`
-                    # handler. Mirrors the PDD_MODULE_TIMEOUT_SECONDS
-                    # pattern in agentic_sync_runner.
                     try:
-                        auth_timeout_s = float(
-                            os.environ.get("PDD_AUTO_SUBMIT_AUTH_TIMEOUT_S", "300")
-                        )
-                    except (TypeError, ValueError):
-                        auth_timeout_s = 300.0
-                    try:
-                        # Get JWT token for cloud authentication; bound the
-                        # asyncio call so a stuck Device Flow on a dev machine
-                        # cannot eat the rest of the fix budget.
-                        # The lower-level helper checks JWT cache before it
-                        # infers the Firebase audience, so seed PDD_ENV from
-                        # PDD_CLOUD_URL first to avoid staging/prod token mixups.
-                        CloudConfig.ensure_default_env()
-                        jwt_token = asyncio.run(asyncio.wait_for(
-                            get_jwt_token(
-                                firebase_api_key=os.environ.get("NEXT_PUBLIC_FIREBASE_API_KEY"),
-                                github_client_id=os.environ.get("GITHUB_CLIENT_ID"),
-                                app_name="PDD Code Generator",
-                            ),
-                            timeout=auth_timeout_s,
-                        ))
+                        jwt_token = CloudConfig.get_jwt_token()
                         processed_prompt = preprocess(
                             input_strings["prompt_file"] + ("\n\n" + render_for_prompt(compressed_context) if render_for_prompt(compressed_context) else ""),
                             recursive=False,
@@ -716,7 +679,7 @@ def fix_main(
                                 "language": get_language(os.path.splitext(code_file)[1]),  # Detect language from file extension
                                 "framework": "",
                                 "tags": ["auto-fix", "example"],
-                                "isPublic": True,
+                                "isPublic": False,
                                 "price": 0.0
                             }
                         }
@@ -759,8 +722,7 @@ def fix_main(
                                 "filename": "analysis.log"
                             }]
 
-                        # Submit through CloudConfig so PDD_CLOUD_URL routes
-                        # staging/local/prod consistently.
+                        # Submit only to the explicitly configured server.
                         headers = {
                             "Authorization": f"Bearer {jwt_token}",
                             "Content-Type": "application/json"
@@ -779,11 +741,10 @@ def fix_main(
                             if not ctx.obj.get('quiet', False):
                                 rprint(f"[bold red]Failed to submit example: {response.text}[/bold red]")
 
-                    except (asyncio.TimeoutError, TimeoutError):
+                    except requests.Timeout:
                         if not ctx.obj.get('quiet', False):
                             rprint(
-                                "[yellow]Skipping example submission: auth did not complete "
-                                f"within {auth_timeout_s:.0f}s[/yellow]"
+                                "[yellow]Skipping example submission: server request timed out.[/yellow]"
                             )
                     except Exception as e:
                         if not ctx.obj.get('quiet', False):

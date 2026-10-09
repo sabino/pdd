@@ -25,7 +25,9 @@ The `RemoteSessionSelector` is a React functional component responsible for prov
 - Implement the component using the `RemoteSessionSelectorProps` interface, including `sessions`, `selectedSessionId`, `onSelectSession`, `disabled`, `error`, and `onRefresh`.
 - Create a helper function `formatRelativeTime` to convert ISO timestamps into human-readable strings (e.g., "5m ago", "2d ago").
 - The dropdown should display the project name and hostname, appending "(offline)" for stale sessions.
-- The debug panel must include a troubleshooting list that maps specific error strings (like "401" or "Not authenticated") to actionable CLI commands (e.g., `pdd auth login`).
+- The debug panel maps missing credentials to PDD_CLOUD_URL and PDD_CLOUD_TOKEN or PDD_CLOUD_TOKEN_FILE configuration.
+- HTTP 401/403 instruct users to check the server token and restart pdd connect. Network errors describe connectivity to the configured server.
+- Group each combined error condition before rendering its JSX element.
 - Use a pulse animation for the status indicator when a session is not active to draw attention to the connectivity state.
 - Ensure the component is "clean" by defaulting `disabled` to false and `error` to null.
 

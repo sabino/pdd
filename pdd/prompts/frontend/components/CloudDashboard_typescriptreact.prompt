@@ -1,0 +1,17 @@
+% Generate pdd/frontend/components/CloudDashboard.tsx as a strict React TypeScript component.
+
+Export named function CloudDashboard. Call service endpoints on the page's own origin.
+Require a password token input before any API call. Keep the token only in component memory.
+Fetch sessions and examples immediately and every 30 seconds after connection.
+Preserve a selected session while present; select an active replacement when it disappears.
+Support /connect/{session_id} as the initial selection.
+Submit command type and JSON-object args/options through submitCommand with a fresh Idempotency-Key.
+Default options to {local: true}. Treat args.args as ordered positional CLI arguments.
+Reject arrays, null, and primitives in either JSON field.
+Poll command results every 1.5 seconds until completed, failed, or cancelled.
+Offer cancellation while pending/processing and display returned stdout/stderr/result as text.
+Enable Run only for an active selected session. Clear token, selection, results, and errors on disconnect.
+Show owner-visible examples and useful HTTP errors. Stop timers and ignore stale responses after cleanup.
+Use native accessible form controls and bundled Tailwind surface colors.
+
+<include>docs/cloud-server-api.md</include>

@@ -18,6 +18,7 @@ from typing import Optional
 import click
 
 from ..cli_branding import PDD_POSITIONING
+from pdd.core.cloud import CloudConfig
 
 
 # Default port and range for auto-assignment
@@ -128,7 +129,7 @@ def connect(
     browser unless --no-browser is specified.
 
     For authenticated users, the session is automatically registered with
-    PDD Cloud for remote access. Use --local-only to skip cloud registration.
+    a configured self-hosted server. Use --local-only to skip registration.
     """
     # Check uvicorn is available
     if uvicorn is None:
@@ -219,19 +220,15 @@ def connect(
         "http://127.0.0.1:5173",
         f"http://localhost:{port}",
         f"http://127.0.0.1:{port}",
-        # PDD Cloud frontend
-        "https://pdd.dev",
-        "https://www.pdd.dev",
     ]
     if frontend_url:
         allowed_origins.append(frontend_url)
 
-    # 4.5 Cloud Session Registration (automatic for authenticated users)
+    # Register only with an explicitly configured server.
     session_manager = None
     cloud_url = None
-    if not local_only:
+    if not local_only and CloudConfig.is_server_configured():
         try:
-            from ..core.cloud import CloudConfig
             from ..remote_session import (
                 RemoteSessionManager,
                 RemoteSessionError,
@@ -246,14 +243,14 @@ def connect(
                     dim=True
                 ))
                 click.echo(click.style(
-                    "Run 'pdd auth login' to enable remote access via cloud.",
+                    "Set PDD_CLOUD_URL and PDD_CLOUD_TOKEN to enable remote access.",
                     dim=True
                 ))
             else:
-                click.echo("Registering session with PDD Cloud...")
+                click.echo(f"Registering session with {CloudConfig.get_base_url()}...")
                 session_manager = RemoteSessionManager(jwt_token, project_root, server_port=port)
                 try:
-                    # Register with cloud - no public URL needed, cloud hosts everything
+                    # The service supplies the dashboard URL.
                     cloud_url = asyncio.run(session_manager.register(
                         session_name=session_name,
                     ))
@@ -261,17 +258,12 @@ def connect(
                     set_active_session_manager(session_manager)
 
                     click.echo(click.style(
-                        "Session registered with PDD Cloud!", fg="green", bold=True
+                        "Session registered with self-hosted server!", fg="green", bold=True
                     ))
-                    # TODO: Re-enable when production /connect page is deployed
-                    # click.echo(f"  Access URL: {click.style(cloud_url, fg='cyan', underline=True)}")
-                    # click.echo(click.style(
-                    #     "  Share this URL to access your PDD session from any browser.",
-                    #     dim=True
-                    # ))
+                    click.echo(f"Remote dashboard: {cloud_url}")
                 except RemoteSessionError as e:
                     click.echo(click.style(
-                        f"Warning: Failed to register with cloud: {e.message}",
+                        f"Warning: Failed to register with server: {e.message}",
                         fg="yellow"
                     ))
                     click.echo(click.style(
@@ -281,12 +273,12 @@ def connect(
                     session_manager = None
         except ImportError as e:
             click.echo(click.style(
-                f"Running in local-only mode (cloud dependencies not available).",
+                f"Running in local-only mode (server dependencies not available).",
                 dim=True
             ))
     else:
         click.echo(click.style(
-            "Running in local-only mode (--local-only flag set).",
+            "Running in local-only mode.",
             dim=True
         ))
 
@@ -315,9 +307,6 @@ def connect(
     click.echo(f"Project Root: {click.style(str(project_root), fg='blue')}")
     click.echo(f"API Documentation: {click.style(f'{server_url}/docs', underline=True)}")
     click.echo(f"Local Frontend: {click.style(target_url, underline=True)}")
-    # TODO: Re-enable when production /connect page is deployed
-    # if cloud_url:
-    #     click.echo(f"Remote Access: {click.style(cloud_url, fg='cyan', underline=True)}")
     click.echo(click.style("Press Ctrl+C to stop the server", dim=True))
 
     # 7. Open Browser
@@ -356,7 +345,7 @@ def connect(
     finally:
         # Clean up cloud session if registered
         if session_manager is not None:
-            click.echo("Deregistering from PDD Cloud...")
+            click.echo("Deregistering from the self-hosted server...")
             try:
                 from ..remote_session import set_active_session_manager
                 asyncio.run(session_manager.stop_heartbeat())

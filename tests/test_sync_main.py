@@ -1,15 +1,12 @@
 # tests/test_sync_main.py
 
-import base64
 import inspect
-import json
 import os
 import re
 import shutil
-import time
 from pathlib import Path
 from typing import Any, Dict, Generator
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import MagicMock, call, patch
 
 import click
 import pytest
@@ -2491,214 +2488,38 @@ class TestIssue1165_SyncMainEndToEnd:
 # ============================================================================
 # pdd sync MODULE_TIMEOUT cap + _auto_submit_example cloud overhead.
 # ============================================================================
-def _make_unsigned_jwt(payload: dict[str, Any]) -> str:
-    """Build an unsigned JWT-shaped token for cache audience tests."""
-    header = {"alg": "none", "typ": "JWT"}
-
-    def _encode(value: dict[str, Any]) -> str:
-        raw = json.dumps(value, separators=(",", ":")).encode("utf-8")
-        return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
-
-    return f"{_encode(header)}.{_encode(payload)}.signature"
-
-
-class TestAutoSubmitSkipInCloud:
-    """In a Cloud Run / Functions executor the interactive Device Flow auth
-    cannot complete and the asyncio JWT call blocks for the full auth window
-    (~5 min) before giving up — pure overhead that pushes successful syncs
-    past their MODULE_TIMEOUT cap. _auto_submit_example must short-circuit
-    when CloudConfig.is_running_in_cloud() reports True."""
-
-    def _make_ctx(self) -> MagicMock:
+class TestPrivateExampleSubmission:
+    def test_upload_requires_explicit_opt_in(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("PDD_FORCE_LOCAL", raising=False)
+        monkeypatch.delenv("PDD_AUTO_SUBMIT_EXAMPLES", raising=False)
         ctx = MagicMock(spec=click.Context)
         ctx.obj = {"quiet": True}
-        return ctx
+        with patch("pdd.core.cloud.CloudConfig.get_jwt_token") as token, patch("requests.post") as post:
+            _real_auto_submit_example("demo", "python", {}, ctx)
+        token.assert_not_called()
+        post.assert_not_called()
 
-    @patch("pdd.get_jwt_token.get_jwt_token")
-    @patch("pdd.core.cloud.CloudConfig.is_running_in_cloud", return_value=True)
-    def test_skips_jwt_auth_when_running_in_cloud(
-        self, mock_in_cloud, mock_get_jwt, tmp_path, monkeypatch
-    ):
-        """When K_SERVICE / FUNCTIONS_EMULATOR is set, do not even start the
-        async JWT request — the auth would block for minutes and fail anyway."""
-        # The module-level autouse fixture sets PDD_FORCE_LOCAL=1 to short-
-        # circuit the function for every other test in this file. Clear it
-        # here so we exercise the cloud-detection branch under test.
+    @pytest.mark.parametrize("server_execution", [True, False])
+    def test_explicit_upload_stays_private_and_uses_the_configured_server(self, server_execution, tmp_path, monkeypatch):
         monkeypatch.delenv("PDD_FORCE_LOCAL", raising=False)
-
-        # Use the pre-monkeypatch reference captured at import time; the
-        # file-wide autouse fixture replaces ``pdd.sync_main._auto_submit_example``
-        # with a no-op for unrelated tests, but we need the real function here.
-        _auto_submit_example = _real_auto_submit_example
-        pdd_files = {
-            "prompt": tmp_path / "x.prompt",
-            "code": tmp_path / "x.py",
-            "example": tmp_path / "x_example.py",
-            "test": tmp_path / "test_x.py",
-        }
-        for f in pdd_files.values():
-            f.write_text("placeholder")
-
-        _auto_submit_example("x", "python", pdd_files, self._make_ctx())
-
-        mock_get_jwt.assert_not_called()
-
-    @patch("requests.post")
-    @patch("pdd.get_jwt_token.get_jwt_token")
-    @patch("pdd.core.cloud.CloudConfig.is_running_in_cloud", return_value=False)
-    def test_jwt_auth_is_bounded_by_a_short_timeout(
-        self, mock_in_cloud, mock_get_jwt, mock_post, tmp_path, monkeypatch
-    ):
-        """Outside cloud, a stuck Device Flow must still fail fast — the auth
-        call is wrapped in asyncio.wait_for so it cannot eat the whole sync.
-
-        We exercise the real asyncio path with a tiny timeout and an
-        async fake that sleeps far longer; this avoids mocking ``asyncio.run``
-        directly (which leaves a half-built coroutine unawaited and emits
-        ``RuntimeWarning: coroutine ... was never awaited``)."""
-        # See note in the previous test: clear the file-wide PDD_FORCE_LOCAL
-        # so we reach the bounded-asyncio branch under test, and pin the
-        # auth timeout to something far below test wallclock.
-        monkeypatch.delenv("PDD_FORCE_LOCAL", raising=False)
-        monkeypatch.setenv("PDD_AUTO_SUBMIT_AUTH_TIMEOUT_S", "0.05")
-
-        import asyncio as _asyncio
-
-        async def _hang_forever(*args, **kwargs):
-            await _asyncio.sleep(60.0)  # far longer than 0.05s timeout
-            return "should-never-resolve"
-
-        mock_get_jwt.side_effect = _hang_forever
-
-        # Use the pre-monkeypatch reference captured at import time; the
-        # file-wide autouse fixture replaces ``pdd.sync_main._auto_submit_example``
-        # with a no-op for unrelated tests, but we need the real function here.
-        _auto_submit_example = _real_auto_submit_example
-        pdd_files = {
-            "prompt": tmp_path / "x.prompt",
-            "code": tmp_path / "x.py",
-            "example": tmp_path / "x_example.py",
-            "test": tmp_path / "test_x.py",
-        }
-        for f in pdd_files.values():
-            f.write_text("placeholder")
-
-        _auto_submit_example("x", "python", pdd_files, self._make_ctx())
-
-        mock_get_jwt.assert_called_once()
-        # Caller bailed out before reaching the cloud HTTP submit.
-        mock_post.assert_not_called()
-
-    @patch("requests.post")
-    @patch("pdd.get_jwt_token.get_jwt_token")
-    @patch("pdd.core.cloud.CloudConfig.is_running_in_cloud", return_value=False)
-    def test_submit_uses_cloudconfig_endpoint(
-        self, mock_in_cloud, mock_get_jwt, mock_post, tmp_path, monkeypatch
-    ):
-        """Regression for #859: PDD_CLOUD_URL must control submitExample."""
-        monkeypatch.delenv("PDD_FORCE_LOCAL", raising=False)
-        monkeypatch.setenv(
-            "PDD_CLOUD_URL",
-            "https://us-central1-prompt-driven-development-stg.cloudfunctions.net",
-        )
-
-        async def _fake_jwt(*args, **kwargs):
-            return "fake_jwt_token"
-
-        mock_get_jwt.side_effect = _fake_jwt
-        mock_post.return_value.status_code = 200
-
-        pdd_files = {
-            "prompt": tmp_path / "x.prompt",
-            "code": tmp_path / "x.py",
-            "example": tmp_path / "x_example.py",
-            "test": tmp_path / "test_x.py",
-        }
-        for f in pdd_files.values():
-            f.write_text("placeholder")
-
-        _real_auto_submit_example("x", "python", pdd_files, self._make_ctx())
-
-        mock_post.assert_called_once()
-        assert (
-            mock_post.call_args.args[0]
-            == "https://us-central1-prompt-driven-development-stg.cloudfunctions.net/submitExample"
-        )
-
-    def test_staging_url_invalidates_prod_cached_jwt_before_submit(
-        self, tmp_path, monkeypatch
-    ):
-        """Regression for #859 follow-up: infer PDD_ENV before cached JWT lookup.
-
-        Without this, the lower-level auth helper sees no PDD_ENV, accepts a
-        prod-audience cached JWT, and posts it to the staging submitExample URL.
-        """
-        monkeypatch.delenv("PDD_FORCE_LOCAL", raising=False)
-        monkeypatch.delenv("PDD_ENV", raising=False)
-        monkeypatch.delenv("PDD_JWT_TOKEN", raising=False)
-        monkeypatch.setenv(
-            "PDD_CLOUD_URL",
-            "https://us-central1-prompt-driven-development-stg.cloudfunctions.net",
-        )
-        monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "prompt-driven-development")
-        monkeypatch.setenv("NEXT_PUBLIC_FIREBASE_API_KEY", "firebase-key")
-        monkeypatch.setenv("GITHUB_CLIENT_ID", "github-client")
-
-        now = int(time.time())
-        prod_token = _make_unsigned_jwt({
-            "aud": "prompt-driven-development",
-            "exp": now + 3600,
-        })
-        staging_token = _make_unsigned_jwt({
-            "aud": "prompt-driven-development-stg",
-            "exp": now + 3600,
-        })
-        cache_file = tmp_path / ".pdd" / "jwt_cache"
-        cache_file.parent.mkdir(parents=True)
-        cache_file.write_text(
-            json.dumps({
-                "id_token": prod_token,
-                "expires_at": now + 3600,
-                "cached_at": now,
-            }),
-            encoding="utf-8",
-        )
-
-        pdd_files = {
-            "prompt": tmp_path / "x.prompt",
-            "code": tmp_path / "x.py",
-            "example": tmp_path / "x_example.py",
-            "test": tmp_path / "test_x.py",
-        }
-        for f in pdd_files.values():
-            f.write_text("placeholder")
-
-        with patch("pdd.core.cloud.CloudConfig.is_running_in_cloud", return_value=False), \
-             patch("pdd.get_jwt_token.JWT_CACHE_FILE", cache_file), \
-             patch(
-                 "pdd.get_jwt_token.FirebaseAuthenticator._get_stored_refresh_token",
-                 return_value="refresh-token",
-             ), \
-             patch(
-                 "pdd.get_jwt_token.FirebaseAuthenticator._refresh_firebase_token",
-                 new=AsyncMock(return_value=staging_token),
-             ) as mock_refresh, \
-             patch("requests.post") as mock_post:
-            mock_post.return_value.status_code = 200
-
-            _real_auto_submit_example("x", "python", pdd_files, self._make_ctx())
-
-        mock_refresh.assert_awaited_once_with("refresh-token")
-        mock_post.assert_called_once()
-        assert os.environ["PDD_ENV"] == "staging"
-        assert (
-            mock_post.call_args.args[0]
-            == "https://us-central1-prompt-driven-development-stg.cloudfunctions.net/submitExample"
-        )
-        assert mock_post.call_args.kwargs["headers"]["Authorization"] == (
-            f"Bearer {staging_token}"
-        )
-        assert prod_token not in mock_post.call_args.kwargs["headers"]["Authorization"]
+        monkeypatch.setenv("PDD_AUTO_SUBMIT_EXAMPLES", "1")
+        monkeypatch.setenv("PDD_CLOUD_URL", "https://server.example")
+        monkeypatch.setenv("PDD_CLOUD_TOKEN", "server-token")
+        files = {name: tmp_path / (name + ".py") for name in ("prompt", "code", "example", "test")}
+        for file in files.values():
+            file.write_text("example contents")
+        ctx = MagicMock(spec=click.Context)
+        ctx.obj = {"quiet": True}
+        with patch("pdd.core.cloud.CloudConfig.is_running_in_cloud", return_value=server_execution), patch("requests.post") as post:
+            post.return_value.status_code = 200
+            _real_auto_submit_example("demo", "python", files, ctx)
+        if server_execution:
+            post.assert_not_called()
+        else:
+            post.assert_called_once()
+            assert post.call_args.args[0] == "https://server.example/submitExample"
+            assert post.call_args.kwargs["json"]["metadata"]["isPublic"] is False
+            assert post.call_args.kwargs["headers"]["Authorization"] == "Bearer server-token"
 
 
 class TestModuleTimeoutEnvOverride:

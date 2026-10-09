@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "strict": true },
+  "include": ["components/CloudDashboard.tsx", "components/ReauthModal.tsx", "components/AuthStatusIndicator.tsx", "components/RemoteSessionSelector.tsx"]
+}

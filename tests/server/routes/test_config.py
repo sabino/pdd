@@ -10,7 +10,7 @@ Test Plan for pdd.server.routes.config
    - Should be a Pydantic BaseModel
 
 3. **GET /cloud-url endpoint**:
-   - **Case 1: Default environment**: Should return production as environment.
+   - **Case 1: Default environment**: Should return self-hosted as environment.
    - **Case 2: Custom environment**: Should respect PDD_ENV env var.
    - **Case 3: Response format**: Should return CloudUrlResponse with correct fields.
 """
@@ -27,7 +27,8 @@ from fastapi import FastAPI
 def mock_cloud_config():
     """Mock CloudConfig for testing."""
     with patch("pdd.server.routes.config.CloudConfig") as mock:
-        mock.get_base_url.return_value = "https://us-central1-pdd-test.cloudfunctions.net"
+        mock.get_base_url.return_value = "https://server.example"
+        mock.is_server_configured.return_value = True
         yield mock
 
 
@@ -69,7 +70,8 @@ def test_cloud_url_response_model():
 
     response = CloudUrlResponse(
         cloud_url="https://example.com",
-        environment="test"
+        environment="test",
+        cloud_enabled=True
     )
     assert response.cloud_url == "https://example.com"
     assert response.environment == "test"
@@ -78,7 +80,7 @@ def test_cloud_url_response_model():
 # --- GET /cloud-url Tests ---
 
 def test_get_cloud_url_default_environment(client, mock_cloud_config):
-    """Should return production as default environment."""
+    """Should return self-hosted as default environment."""
     # Ensure PDD_ENV is not set
     with patch.dict(os.environ, {}, clear=False):
         if "PDD_ENV" in os.environ:
@@ -88,8 +90,8 @@ def test_get_cloud_url_default_environment(client, mock_cloud_config):
 
         assert response.status_code == 200
         data = response.json()
-        assert data["cloud_url"] == "https://us-central1-pdd-test.cloudfunctions.net"
-        assert data["environment"] == "production"
+        assert data["cloud_url"] == "https://server.example"
+        assert data["environment"] == "self-hosted"
 
 
 def test_get_cloud_url_custom_environment(client, mock_cloud_config):
@@ -110,6 +112,6 @@ def test_get_cloud_url_response_format(client, mock_cloud_config):
     data = response.json()
 
     # Should have exactly these keys
-    assert set(data.keys()) == {"cloud_url", "environment"}
+    assert set(data.keys()) == {"cloud_url", "environment", "cloud_enabled"}
     assert isinstance(data["cloud_url"], str)
     assert isinstance(data["environment"], str)

@@ -356,7 +356,7 @@
 
 % Cloud Execution:
     - Define three cloud-related exceptions:
-      - CloudFallbackError: Raised for recoverable errors (network, timeout, auth, 5xx). Triggers fallback to local. On 401/403, clear JWT cache.
+      - CloudFallbackError: Raised for recoverable errors (network, timeout, auth, 5xx). Triggers fallback to local. On 401/403, preserve identity caches and explain PDD_CLOUD_TOKEN or PDD_CLOUD_TOKEN_FILE.
       - CloudInvocationError: Raised for non-recoverable cloud errors.
       - InsufficientCreditsError: Raised for 402 Payment Required. Does NOT fall back to local.
     - Helper functions:
@@ -388,7 +388,7 @@
 
 % Cloud API Documentation:
    <cloud_api_documentation>
-      <include>../docs/api-documentation.md</include>
+      <include>docs/cloud-server-api.md</include>
    </cloud_api_documentation>
 
 % Multi-Credential Providers:
@@ -425,3 +425,6 @@
     <litellm_batch_mode_example><web>https://docs.litellm.ai/docs/completion/batching</web></litellm_batch_mode_example>
     <litellm_exception_mapping_example><web>https://docs.litellm.ai/docs/exception_mapping</web></litellm_exception_mapping_example>
     <litellm_context_window_example><web>https://docs.litellm.ai/docs/exception_mapping#context-window-errors</web></litellm_context_window_example>
+
+When is_server_execution() is true, force use_cloud=false even if the caller explicitly requests cloud.
+Disallow interactive credential acquisition in that request context. Preserve local-provider behavior outside it.

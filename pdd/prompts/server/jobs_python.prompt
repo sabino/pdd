@@ -86,3 +86,6 @@
 
 % Deliverables
   - Code: `pdd/server/jobs.py`
+
+In either CLI argument builder, args["args"] overrides the named positional mapping for every command.
+Append that ordered list as positionals, never as a --args option. Preserve global flags before the subcommand.

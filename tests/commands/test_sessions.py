@@ -95,7 +95,7 @@ def test_list_sessions_not_authenticated(mock_cloud_config, runner):
 
     assert result.exit_code == 0
     assert "Not authenticated" in result.output
-    assert "pdd auth login" in result.output
+    assert "PDD_CLOUD_TOKEN" in result.output
 
 
 @patch("pdd.commands.sessions.RemoteSessionManager")
@@ -426,9 +426,7 @@ def test_cleanup_not_authenticated_shows_correct_command(mock_cloud_config, runn
     """
     Test for Issue #470: Verify cleanup command shows correct auth command.
 
-    The cleanup command should reference 'pdd auth login', not 'pdd login'.
-    This test will FAIL on the buggy code (line 159 has 'pdd login')
-    and PASS once fixed to match lines 33 and 107.
+    The cleanup command must explain the bearer-token configuration.
     """
     mock_cloud_config.get_jwt_token.return_value = None
 
@@ -437,9 +435,9 @@ def test_cleanup_not_authenticated_shows_correct_command(mock_cloud_config, runn
     assert result.exit_code == 0
     assert "Not authenticated" in result.output
     # This assertion will FAIL on buggy code because it says 'pdd login'
-    assert "pdd auth login" in result.output, (
-        "Error message should reference 'pdd auth login', not 'pdd login'. "
-        "See issue #470 for details."
+    assert "PDD_CLOUD_TOKEN" in result.output, (
+        "Error message should reference 'PDD_CLOUD_TOKEN', not 'pdd login'. "
+        "Configure the same token as the self-hosted service."
     )
 
 
@@ -449,7 +447,7 @@ def test_info_not_authenticated_shows_correct_command(mock_cloud_config, runner)
     Strengthen the info command test to verify correct auth command reference.
 
     This ensures consistency with the list and cleanup commands.
-    Should reference 'pdd auth login', not 'pdd login'.
+    Should reference 'PDD_CLOUD_TOKEN', not 'pdd login'.
     """
     mock_cloud_config.get_jwt_token.return_value = None
 
@@ -457,8 +455,8 @@ def test_info_not_authenticated_shows_correct_command(mock_cloud_config, runner)
 
     assert result.exit_code == 0
     assert "Not authenticated" in result.output
-    assert "pdd auth login" in result.output, (
-        "Error message should reference 'pdd auth login' for consistency"
+    assert "PDD_CLOUD_TOKEN" in result.output, (
+        "Error message should reference 'PDD_CLOUD_TOKEN' for consistency"
     )
 
 
@@ -471,11 +469,10 @@ def test_info_not_authenticated_shows_correct_command(mock_cloud_config, runner)
 def test_all_subcommands_show_consistent_auth_command(mock_cloud_config, subcommand, args, runner):
     """
     Regression test for Issue #470: Ensure ALL sessions subcommands consistently
-    reference 'pdd auth login' when not authenticated.
+    reference 'PDD_CLOUD_TOKEN' when not authenticated.
 
     This parametrized test covers list, info, and cleanup commands.
-    It will FAIL for the cleanup command on buggy code.
-    """
+        """
     mock_cloud_config.get_jwt_token.return_value = None
 
     result = runner.invoke(sessions, [subcommand] + args)
@@ -483,11 +480,11 @@ def test_all_subcommands_show_consistent_auth_command(mock_cloud_config, subcomm
     assert result.exit_code == 0
     assert "Not authenticated" in result.output
     # All subcommands must consistently reference the correct command
-    assert "pdd auth login" in result.output, (
-        f"The '{subcommand}' subcommand should reference 'pdd auth login', not 'pdd login'. "
+    assert "PDD_CLOUD_TOKEN" in result.output, (
+        f"The '{subcommand}' subcommand should reference 'PDD_CLOUD_TOKEN', not 'pdd login'. "
         "All auth error messages must be consistent. See issue #470."
     )
     # Ensure the wrong command is NOT present
-    assert "pdd login" not in result.output or "pdd auth login" in result.output, (
+    assert "pdd login" not in result.output or "PDD_CLOUD_TOKEN" in result.output, (
         f"The '{subcommand}' subcommand should not reference the non-existent 'pdd login' command"
     )

@@ -30,7 +30,7 @@ def list_sessions(json_output: bool) -> None:
     """
     jwt_token = CloudConfig.get_jwt_token()
     if not jwt_token:
-        console.print("[red]Error: Not authenticated. Please run 'pdd auth login'.[/red]")
+        console.print("[red]Not authenticated. Set PDD_CLOUD_URL and PDD_CLOUD_TOKEN or PDD_CLOUD_TOKEN_FILE.[/red]")
         return
 
     try:
@@ -104,7 +104,7 @@ def session_info(session_id: str) -> None:
     """
     jwt_token = CloudConfig.get_jwt_token()
     if not jwt_token:
-        console.print("[red]Error: Not authenticated. Please run 'pdd auth login'.[/red]")
+        console.print("[red]Not authenticated. Set PDD_CLOUD_URL and PDD_CLOUD_TOKEN or PDD_CLOUD_TOKEN_FILE.[/red]")
         return
 
     try:
@@ -156,7 +156,7 @@ def cleanup_sessions(cleanup_all: bool, cleanup_stale: bool, force: bool) -> Non
     """
     jwt_token = CloudConfig.get_jwt_token()
     if not jwt_token:
-        console.print("[red]Error: Not authenticated. Please run 'pdd auth login'.[/red]")
+        console.print("[red]Not authenticated. Set PDD_CLOUD_URL and PDD_CLOUD_TOKEN or PDD_CLOUD_TOKEN_FILE.[/red]")
         return
 
     try:

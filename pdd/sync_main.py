@@ -484,14 +484,12 @@ def _auto_submit_example(
     pdd_files: Dict[str, Path],
     ctx: click.Context,
 ) -> None:
-    """Submit example to cloud after successful one-session sync."""
-    import asyncio
+    """Upload a private example after explicit operator opt-in."""
     import os
 
     import requests
 
     from .core.cloud import CloudConfig, get_cloud_request_timeout
-    from .get_jwt_token import get_jwt_token
     from .preprocess import preprocess
 
     quiet = ctx.obj.get("quiet", False)
@@ -499,45 +497,14 @@ def _auto_submit_example(
     if os.environ.get("PDD_FORCE_LOCAL", "").strip().lower() in {"1", "true", "yes", "on"}:
         return
 
-    # Skip auto-submit inside cloud executors. Interactive Device Flow auth
-    # cannot complete in a headless Cloud Run / Cloud Functions environment
-    # and the asyncio JWT call blocks for the full auth timeout (~5 min) before
-    # giving up — pure overhead that pushes successful syncs past their cap.
+    # Keep server-side requests from recursively uploading examples.
     if CloudConfig.is_running_in_cloud():
         return
 
-    # Bound the JWT auth call as a safety net so a wedged Device Flow cannot
-    # eat the rest of the sync indefinitely. Cache hits and refresh-token
-    # renewals (the common case) return in well under a second; only an
-    # honest first-time interactive Device Flow needs minutes for the user
-    # to visit GitHub and authorise. Defaulting to 5 min keeps interactive
-    # auth working while still catching truly hung cases. Defensive parse:
-    # a malformed env value (e.g. `PDD_AUTO_SUBMIT_AUTH_TIMEOUT_S=abc`)
-    # falls back to the 300s default rather than crashing a successful
-    # sync via the outer warning path.
-    try:
-        auth_timeout_s = float(os.environ.get("PDD_AUTO_SUBMIT_AUTH_TIMEOUT_S", "300"))
-    except (TypeError, ValueError):
-        auth_timeout_s = 300.0
-    try:
-        # The lower-level async auth helper checks JWT cache before it knows
-        # which Firebase audience is expected. Infer PDD_ENV from PDD_CLOUD_URL
-        # first so staging/prod cache validation cannot reuse the wrong token.
-        CloudConfig.ensure_default_env()
-        jwt_token = asyncio.run(asyncio.wait_for(
-            get_jwt_token(
-                firebase_api_key=os.environ.get("NEXT_PUBLIC_FIREBASE_API_KEY"),
-                github_client_id=os.environ.get("GITHUB_CLIENT_ID"),
-                app_name="PDD Code Generator",
-            ),
-            timeout=auth_timeout_s,
-        ))
-    except (asyncio.TimeoutError, TimeoutError):
-        if not quiet:
-            rprint(
-                "[yellow]Skipping example submission: auth did not complete "
-                f"within {auth_timeout_s:.0f}s[/yellow]"
-            )
+    if os.environ.get("PDD_AUTO_SUBMIT_EXAMPLES", "").strip().lower() not in {"1", "true", "yes", "on"}:
+        return
+    jwt_token = CloudConfig.get_jwt_token()
+    if not jwt_token:
         return
 
     prompt_content = pdd_files["prompt"].read_text(encoding="utf-8")
@@ -560,7 +527,7 @@ def _auto_submit_example(
             "language": language,
             "framework": "",
             "tags": ["auto-fix", "one-session", "example"],
-            "isPublic": True,
+            "isPublic": False,
             "price": 0.0,
         },
     }

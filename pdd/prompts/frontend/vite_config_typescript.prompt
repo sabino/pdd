@@ -1,0 +1,4 @@
+% Generate pdd/frontend/vite.config.ts.
+
+Use React and @tailwindcss/vite plugins, preserving the existing development host and alias.
+Build Tailwind and React assets locally. Do not inject API_KEY or GEMINI_API_KEY into browser code.

@@ -137,3 +137,7 @@ Preprocesses prompt files for LLMs by resolving XML-like tags (`<pdd>`, `<includ
 
 % Deliverables
 - Code: `pdd/preprocess.py`
+
+At the start of preprocess, when is_server_execution() is true, return caller text literally.
+Only apply requested double_curly escaping. Resolve no include, shell, web, or other directives in this context.
+The local caller expands workspace context before sending inference requests to the service.

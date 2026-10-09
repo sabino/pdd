@@ -1,0 +1,5 @@
+% Maintain pdd/__init__.py as the CLI package initializer.
+
+Preserve exported CLI entrypoints, constants, package version loading, logging defaults,
+and the existing pytest command helper.
+Do not set Firebase API keys, GitHub OAuth client IDs, or PDD Cloud defaults at import time.

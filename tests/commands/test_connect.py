@@ -134,7 +134,8 @@ def test_connect_local_only_flag(mock_dependencies):
             result = runner.invoke(connect, ["--local-only"])
 
             assert result.exit_code == 0
-            assert "Running in local-only mode (--local-only flag set)" in result.output
+            assert "Running in local-only mode" in result.output
+            mock_dependencies["get_jwt_token"].assert_not_called()
             assert "Starting PDD server on http://127.0.0.1:9876" in result.output
 
             # Should still run the server
@@ -392,19 +393,12 @@ def test_connect_port_available_uses_requested(mock_dependencies):
 
 # --- Bug #470: Incorrect auth command reference in error messages ---
 
-def test_connect_unauthenticated_shows_correct_auth_command(mock_dependencies):
-    """
-    Test for Issue #470: Verify connect command references 'pdd auth login'
-    when not authenticated, not the non-existent 'pdd login'.
-    """
+def test_connect_unconfigured_server_stays_local(mock_dependencies):
     with patch("pdd.commands.connect.is_port_available", return_value=True), \
-         patch("pdd.core.cloud.CloudConfig.get_jwt_token", return_value=None):
-
+         patch("pdd.core.cloud.CloudConfig.is_server_configured", return_value=False):
         runner = CliRunner()
         with runner.isolated_filesystem():
             result = runner.invoke(connect)
-
-        assert "pdd auth login" in result.output, (
-            "Connect command should reference 'pdd auth login' when not authenticated, "
-            f"not 'pdd login'. Got: {result.output}"
-        )
+        assert result.exit_code == 0
+        assert "Running in local-only mode" in result.output
+        mock_dependencies["get_jwt_token"].assert_not_called()

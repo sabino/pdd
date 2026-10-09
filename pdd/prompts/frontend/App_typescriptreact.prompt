@@ -49,7 +49,7 @@ Requirements
    - other views -> `#<view>`
    - on `hashchange`, restore view/sub-view and pending prompt path; clear `editingPrompt` if hash has no prompt path.
 12. When connected and `pendingPromptPath` exists, load prompts via `api.listPrompts()`, open matching prompt in `PromptSpace`, and clear pending path on success or failure.
-13. When connected, fetch remote sessions immediately and every 30s via `api.listRemoteSessions()`:
+13. When connected and cloud_enabled from api.getCloudConfiguration is true, fetch remote sessions immediately and every 30s via `api.listRemoteSessions()`:
    - store sessions, clear prior error on success, auto-select first session if none selected.
    - on failure, set remote-session error and show network/general error toasts (avoid auth-error toast spam).
 14. Implement command execution flows:
@@ -86,3 +86,7 @@ Requirements
 
 Deliverable
 - Output only `pdd/frontend/App.tsx`.
+
+Default executionMode to local and cloudEnabled to false.
+Discover server configuration after the local API connects; hide remote controls and AuthStatusIndicator when unconfigured.
+Import named AuthStatusIndicator and ReauthModal. Keep local operation independent of the optional service.

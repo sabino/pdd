@@ -9,8 +9,8 @@ import ProjectSettings from './components/ProjectSettings';
 import JobDashboard, { BatchOperation } from './components/JobDashboard';
 import TaskQueuePanel from './components/TaskQueuePanel';
 import AddToQueueModal from './components/AddToQueueModal';
-import AuthStatusIndicator from './components/AuthStatusIndicator';
-import ReauthModal from './components/ReauthModal';
+import { AuthStatusIndicator } from './components/AuthStatusIndicator';
+import { ReauthModal } from './components/ReauthModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import RemoteSessionSelector from './components/RemoteSessionSelector';
 import ExecutionModeToggle from './components/ExecutionModeToggle';
@@ -95,7 +95,8 @@ const App: React.FC = () => {
   }, [audioEnabled, setAudioEnabled, testSound]);
 
   // Remote session state
-  const [executionMode, setExecutionMode] = useState<'local' | 'remote'>('remote');
+  const [executionMode, setExecutionMode] = useState<'local' | 'remote'>('local');
+  const [cloudEnabled, setCloudEnabled] = useState(false);
   const [remoteSessions, setRemoteSessions] = useState<RemoteSessionInfo[]>([]);
   const [selectedRemoteSession, setSelectedRemoteSession] = useState<string | null>(null);
   const [remoteSessionError, setRemoteSessionError] = useState<string | null>(null);
@@ -290,9 +291,20 @@ const App: React.FC = () => {
     }
   }, [serverConnected, pendingPromptPath]);
 
-  // Fetch remote sessions on mount and refresh every 30 seconds
   useEffect(() => {
     if (!serverConnected) return;
+    let active = true;
+    api.getCloudConfiguration().then(config => {
+      if (active) setCloudEnabled(config.cloud_enabled);
+    }).catch(() => {
+      if (active) setCloudEnabled(false);
+    });
+    return () => { active = false; };
+  }, [serverConnected]);
+
+  // Poll remote sessions only when an operator configured a service.
+  useEffect(() => {
+    if (!serverConnected || !cloudEnabled) return;
 
     const fetchRemoteSessions = async () => {
       try {
@@ -327,7 +339,7 @@ const App: React.FC = () => {
     const interval = setInterval(fetchRemoteSessions, 30000);
 
     return () => clearInterval(interval);
-  }, [serverConnected, addToast]);
+  }, [serverConnected, cloudEnabled, addToast]);
 
 
   const handleRunCommand = async (command: CommandType, prompt: PromptInfo, commandOptions?: Record<string, any>) => {
@@ -944,6 +956,7 @@ const App: React.FC = () => {
               </button>
 
               {/* Remote/Local toggle */}
+              {cloudEnabled && (
               <button
                 onClick={() => setShowRemotePanel(!showRemotePanel)}
                 className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
@@ -959,6 +972,7 @@ const App: React.FC = () => {
                 </span>
                 <span className="hidden sm:inline">{executionMode === 'remote' ? 'Remote' : 'Local'}</span>
               </button>
+              )}
 
               {/* Connection status */}
               <div className={`flex items-center gap-1.5 text-xs px-2 py-1.5 rounded-full transition-colors ${
@@ -990,7 +1004,7 @@ const App: React.FC = () => {
               </button>
 
               {/* Cloud auth status */}
-              <AuthStatusIndicator onReauth={() => setShowReauthModal(true)} />
+              {cloudEnabled && <AuthStatusIndicator onReauth={() => setShowReauthModal(true)} />}
             </div>
           </div>
         </div>

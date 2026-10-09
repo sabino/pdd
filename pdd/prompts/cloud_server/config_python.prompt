@@ -1,0 +1,12 @@
+% Generate pdd/cloud_server/config.py for operator-owned server settings.
+
+Define frozen ServerSettings with database: Path and hidden-repr tokens: tuple[(owner, token)].
+Defaults: public_url http://127.0.0.1:9877, origins localhost/127.0.0.1:9876,
+session_timeout 120 seconds, example_limit 3, max_body_bytes 4 MiB.
+Require distinct nonempty owners, distinct tokens of at least 32 characters, and at least one token.
+Validate HTTP(S) public URL without credentials, query, or fragment.
+Require session_timeout >=30, example_limit 0..10, max_body_bytes >=1024.
+load_settings reads PDD_SERVER_TOKENS_FILE as a strict JSON owner-to-token object.
+Otherwise use PDD_SERVER_TOKEN under owner named owner.
+Read database, public URL, origins, session timeout, and example limit from documented server variables.
+Expand filesystem paths. Never connect to a hosted identity service.

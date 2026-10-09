@@ -93,3 +93,6 @@
 
 % Deliverables
   - `pdd/core/cli.py`
+
+Set ctx.obj["local"] true when --local, estimate mode, PDD_FORCE_LOCAL, or absent/disabled self-hosted configuration applies.
+Keep PDD_AUTO_UPDATE disabled by default; only an explicit non-false value enables update checks.

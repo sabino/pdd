@@ -21,7 +21,7 @@ call site is updated to the canonical pattern.
 """
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, mock_open, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 from click import Context
@@ -127,14 +127,12 @@ def test_sync_auto_submit_example_passes_timeout_kwarg(tmp_path, monkeypatch):
     ctx.obj = {"quiet": True}
 
     monkeypatch.delenv("PDD_FORCE_LOCAL", raising=False)
+    monkeypatch.setenv("PDD_AUTO_SUBMIT_EXAMPLES", "1")
 
-    # preprocess, get_jwt_token, and requests are imported lazily inside
-    # _auto_submit_example, so patch them at their source modules.
-    # get_jwt_token is an `async def`; using AsyncMock here lets the real
-    # `asyncio.run` await it without leaking an unawaited-coroutine warning.
     with patch("pdd.preprocess.preprocess", return_value="processed"), \
-         patch("pdd.get_jwt_token.get_jwt_token", new_callable=AsyncMock,
+         patch("pdd.core.cloud.CloudConfig.get_jwt_token",
                return_value="fake_jwt"), \
+         patch("pdd.core.cloud.CloudConfig.get_endpoint_url", return_value="http://testserver/submitExample"), \
          patch("requests.post") as mock_post:
 
         mock_response = MagicMock()
@@ -188,10 +186,10 @@ def _fix_main_ctx():
 @patch("pdd.fix_main.Path")
 @patch("pdd.fix_main.construct_paths")
 @patch("pdd.fix_main.fix_errors_from_unit_tests")
-@patch("pdd.fix_main.CloudConfig.get_jwt_token", return_value=None)
-@patch("pdd.fix_main.get_jwt_token", new_callable=AsyncMock)
+@patch("pdd.fix_main.CloudConfig.get_jwt_token", side_effect=[None, "fake_jwt_token"])
+@patch("pdd.fix_main.CloudConfig.is_server_configured", return_value=True)
 def test_fix_main_auto_submit_passes_timeout_kwarg(
-    mock_get_jwt_token,
+    mock_server_configured,
     mock_cloud_jwt,
     mock_fix_errors,
     mock_construct_paths,
@@ -242,7 +240,6 @@ def test_fix_main_auto_submit_passes_timeout_kwarg(
         "gpt-4",
     )
     mock_run_pytest.return_value = (0, 0, 0, "All tests passed")
-    mock_get_jwt_token.return_value = "fake_jwt_token"
 
     m_open = mock_open(read_data="verifier content")
     # `fix_main.get_language()` is called while building the auto_submit payload
@@ -253,6 +250,7 @@ def test_fix_main_auto_submit_passes_timeout_kwarg(
     # is hermetic and verifies only the timeout-kwarg contract.
     with patch("builtins.open", m_open), \
          patch("pdd.fix_main.preprocess", return_value="processed prompt"), \
+         patch("pdd.fix_main.CloudConfig.get_endpoint_url", return_value="http://testserver/submitExample"), \
          patch("pdd.fix_main.get_language", return_value="python"), \
          patch("pdd.fix_main.requests") as mock_requests:
         mock_response = MagicMock()

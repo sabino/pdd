@@ -9,7 +9,7 @@ export const GLOBAL_DEFAULTS: GlobalDefaults = {
   verbose: false,
   quiet: false,
   force: false,
-  local: false,
+  local: true,
   reviewExamples: false,
 };
 
@@ -77,7 +77,7 @@ export const GLOBAL_OPTIONS: GlobalOption[] = [
     cliFlag: '--local',
     type: 'checkbox',
     placeholder: '',
-    description: 'Run commands locally instead of in the cloud',
+    description: 'Use model credentials on this machine instead of the configured server',
     defaultValue: GLOBAL_DEFAULTS.local,
   },
   {
@@ -233,7 +233,7 @@ export const COMMANDS: Record<CommandType, CommandConfig> = {
   [CommandType.SUBMIT_EXAMPLE]: {
     name: CommandType.SUBMIT_EXAMPLE,
     backendName: 'fix',  // Uses fix command under the hood
-    description: "Submit a successful fix as a few-shot example to PDD Cloud. Runs fix --loop --auto-submit with verification to iteratively fix and submit the example.",
+    description: "Submit a successful fix as a private example to your configured server. Runs fix --loop --auto-submit with verification.",
     shortDescription: "Submit Example",
     icon: "🚀",
     requiresPrompt: true,

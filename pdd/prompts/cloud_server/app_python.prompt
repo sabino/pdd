@@ -1,0 +1,18 @@
+% Generate pdd/cloud_server/app.py as the self-hosted FastAPI service.
+
+Export create_app(settings: ServerSettings|None = None) -> FastAPI.
+Initialize SQLite during lifespan. Authenticate all contract APIs with constant-time bearer-token matching.
+The configured token determines ownership; API bodies cannot select another owner.
+Keep /health public. Expose validated generation, relay, and example routes from the contract.
+Support exact configured CORS origins, GET/POST, Authorization, Content-Type, and Idempotency-Key.
+Bound streamed request bodies before JSON parsing to max_body_bytes.
+Errors use {error: message}; validation adds field/message details without echoing request contents.
+Sanitize inference failures as HTTP 502, retaining diagnostics in the server log.
+getCreditBalance reports billingEnabled=false and null balances.
+syncState and trackUsage return authenticated HTTP 501 because their public request contracts are absent.
+Serve bundled assets, logo.svg, /cloud, and /connect/{session_id}; redirect / to cloud.
+Validate the connect path's session_id as 1..128 characters and expose it in OpenAPI.
+Return 503 with Bun build instructions if the frontend is missing.
+Never require Firebase, a PDD Cloud account, or deployment credentials.
+
+<include>docs/cloud-server-api.md</include>

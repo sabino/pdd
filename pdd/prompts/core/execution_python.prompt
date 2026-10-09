@@ -1,0 +1,6 @@
+% Generate pdd/core/execution.py for request-scoped server execution.
+
+Use ContextVar[bool] with default false.
+Export is_server_execution() -> bool and server_execution(), a context manager.
+The context manager sets true and always restores its ContextVar token in finally.
+Support nested scopes and concurrent requests without process-wide environment mutation.

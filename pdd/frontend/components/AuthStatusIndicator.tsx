@@ -5,7 +5,7 @@ interface AuthStatusIndicatorProps {
   onReauth: () => void;
 }
 
-const AuthStatusIndicator: React.FC<AuthStatusIndicatorProps> = ({ onReauth }) => {
+export function AuthStatusIndicator({ onReauth }: AuthStatusIndicatorProps) {
   const [status, setStatus] = useState<AuthStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -49,7 +49,7 @@ const AuthStatusIndicator: React.FC<AuthStatusIndicatorProps> = ({ onReauth }) =
           ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20'
           : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/20'
       }`}
-      title={isAuthenticated ? 'Cloud Authenticated - Click to manage authentication' : 'Not authenticated - Click to login'}
+      title={isAuthenticated ? 'Server configured - Click to view connection settings' : 'Server token missing - Click to view connection settings'}
     >
       {/* Key icon for authentication */}
       <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -57,10 +57,10 @@ const AuthStatusIndicator: React.FC<AuthStatusIndicatorProps> = ({ onReauth }) =
       </svg>
       {/* Always show text label */}
       <span className="sr-only">
-        {isAuthenticated ? 'Cloud Authenticated - Click to manage authentication' : 'Not authenticated - Click to login'}
+        {isAuthenticated ? 'Server configured - Click to view connection settings' : 'Server token missing - Click to view connection settings'}
       </span>
       <span className="hidden xs:inline" aria-hidden="true">
-        {isAuthenticated ? 'Logged In' : 'Login'}
+        {isAuthenticated ? 'Server' : 'Configure'}
       </span>
       {/* Status dot */}
       <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
@@ -68,6 +68,4 @@ const AuthStatusIndicator: React.FC<AuthStatusIndicatorProps> = ({ onReauth }) =
       }`} />
     </button>
   );
-};
-
-export default AuthStatusIndicator;
+}

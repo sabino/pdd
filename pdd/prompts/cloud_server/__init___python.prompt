@@ -1,0 +1,3 @@
+% Generate pdd/cloud_server/__init__.py as the self-hosted service namespace.
+
+Include only a package docstring. Import no application and perform no side effects.

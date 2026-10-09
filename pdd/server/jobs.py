@@ -285,7 +285,7 @@ def _build_subprocess_command_args(
             cmd_opts["manual"] = True
 
     # Get positional arg names for this command
-    positional_names = POSITIONAL_ARGS.get(command, [])
+    positional_names = ["args"] if args and "args" in args else POSITIONAL_ARGS.get(command, [])
 
     if args:
         # First, add positional arguments in order

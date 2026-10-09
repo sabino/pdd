@@ -1,0 +1,7 @@
+% Generate pdd/cloud_server/__main__.py for pdd-cloud-server.
+
+Export main() with argparse --host (127.0.0.1) and --port (9877).
+Default PDD_SERVER_PUBLIC_URL to the chosen host/port; use 127.0.0.1 for wildcard binding.
+Set PDD_FORCE_LOCAL=1 and PDD_NO_INTERACTIVE=1 for the dedicated service process.
+Load validated settings, report configuration errors with parser.error, and run Uvicorn.
+Support python -m pdd.cloud_server through the main guard. Do not open a browser.

@@ -1,0 +1,20 @@
+% Generate pdd/cloud_server/store.py as owner-scoped SQLite persistence.
+
+Export StoreError with status_code, JsonObject, and the storage functions used by the API.
+Initialize sessions, commands, examples, and FTS5 tables idempotently.
+Create the database with mode 0600, enable WAL, foreign keys, and a 15-second busy timeout.
+Close connections deterministically. Use BEGIN IMMEDIATE for write transactions.
+Use parameterized SQL and UTC-aware ISO timestamps.
+Require session ownership before reading or modifying commands. Hide foreign state with 404.
+Derive active/stale from heartbeat age. Closed sessions are excluded from listSessions.
+Deregister idempotently closes the session and cancels pending/processing commands.
+Preserve cancellation against late worker updates; terminal results are immutable.
+Repeated identical terminal updates succeed; conflicting transitions return 409.
+Registration and command submission deduplicate optional Idempotency-Key values.
+Reject key reuse with changed bodies; keep keys scoped by owner or session.
+Example IDs hash owner plus canonical payload. Repeated uploads do not duplicate records.
+Examples are private unless metadata.isPublic is exactly true.
+Shared examples remain restricted to authenticated users.
+FTS5 searches owner-visible examples, supports language filtering, and returns bounded results.
+
+<include>docs/cloud-server-api.md</include>

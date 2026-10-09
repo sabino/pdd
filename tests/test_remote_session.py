@@ -1,4 +1,3 @@
-import os
 import pytest
 import asyncio
 import datetime
@@ -1018,65 +1017,21 @@ class TestJWTTokenRefresh:
 
     @pytest.mark.asyncio
     async def test_refresh_token_updates_jwt(self, manager):
-        """
-        Test that _refresh_token method correctly updates the jwt_token.
-        """
-        import os
-
-        original_token = manager.jwt_token
-        new_token = "new-refreshed-token"
-
-        # Mock the Firebase authenticator
-        with patch.dict(os.environ, {"NEXT_PUBLIC_FIREBASE_API_KEY": "test-api-key"}):
-            with patch("pdd.remote_session.KEYRING_AVAILABLE", True):
-                with patch("pdd.remote_session.FirebaseAuthenticator") as MockAuth:
-                    mock_auth_instance = MagicMock()
-                    mock_auth_instance._get_stored_refresh_token.return_value = "refresh-token"
-                    mock_auth_instance._refresh_firebase_token = AsyncMock(return_value=new_token)
-                    MockAuth.return_value = mock_auth_instance
-
-                    with patch("pdd.remote_session._get_cached_jwt", return_value=None):
-                        with patch("pdd.get_jwt_token._cache_jwt"):
-                            result = await manager._refresh_token()
-
-        assert result is True
-        assert manager.jwt_token == new_token
+        with patch("pdd.remote_session.CloudConfig.get_jwt_token", return_value="rotated-token"):
+            assert await manager._refresh_token()
+        assert manager.jwt_token == "rotated-token"
 
     @pytest.mark.asyncio
     async def test_refresh_token_returns_false_on_failure(self, manager):
-        """
-        Test that _refresh_token returns False when refresh fails.
-        """
-        import os
-
-        with patch.dict(os.environ, {"NEXT_PUBLIC_FIREBASE_API_KEY": "test-api-key"}):
-            with patch("pdd.remote_session.KEYRING_AVAILABLE", True):
-                with patch("pdd.remote_session.FirebaseAuthenticator") as MockAuth:
-                    mock_auth_instance = MagicMock()
-                    mock_auth_instance._get_stored_refresh_token.return_value = "refresh-token"
-                    mock_auth_instance._refresh_firebase_token = AsyncMock(
-                        side_effect=Exception("Refresh failed")
-                    )
-                    MockAuth.return_value = mock_auth_instance
-
-                    with patch("pdd.remote_session._get_cached_jwt", return_value=None):
-                        result = await manager._refresh_token()
-
-        assert result is False
+        original_token = manager.jwt_token
+        with patch("pdd.remote_session.CloudConfig.get_jwt_token", side_effect=OSError("missing token file")):
+            assert not await manager._refresh_token()
+        assert manager.jwt_token == original_token
 
     @pytest.mark.asyncio
-    async def test_refresh_token_uses_cached_token_if_available(self, manager):
-        """
-        Test that _refresh_token uses cached token if another coroutine already refreshed.
-        """
-        original_token = manager.jwt_token
-        cached_new_token = "already-refreshed-token"
-
-        with patch("pdd.remote_session._get_cached_jwt", return_value=cached_new_token):
-            result = await manager._refresh_token()
-
-        assert result is True
-        assert manager.jwt_token == cached_new_token
+    async def test_refresh_token_returns_false_when_configuration_is_missing(self, manager):
+        with patch("pdd.remote_session.CloudConfig.get_jwt_token", return_value=None):
+            assert not await manager._refresh_token()
 
 
 class TestGetPendingCommands401Handling:
@@ -1302,38 +1257,18 @@ class TestIssue470AuthCommandReferences:
     """
 
     @pytest.mark.asyncio
-    async def test_refresh_token_no_refresh_token_shows_correct_command(
-        self, manager
-    ):
-        """
-        Test that _refresh_token references 'pdd auth login' when no refresh token
-        is stored. This covers remote_session.py line 199.
-        """
-        with patch("pdd.remote_session._get_cached_jwt", return_value=None), \
-             patch.dict(os.environ, {"NEXT_PUBLIC_FIREBASE_API_KEY": "test-key"}), \
-             patch("pdd.remote_session.KEYRING_AVAILABLE", True), \
-             patch("pdd.remote_session.FirebaseAuthenticator") as mock_auth, \
-             patch("pdd.remote_session.console") as mock_console:
-            mock_instance = MagicMock()
-            mock_instance._get_stored_refresh_token.return_value = None
-            mock_auth.return_value = mock_instance
-
-            result = await manager._refresh_token()
-
-            assert result is False
-            # Check that at least one console.print call contains 'pdd auth login'
-            printed = " ".join(str(call[0][0]) for call in mock_console.print.call_args_list if call[0])
-            assert "pdd auth login" in printed, (
-                "refresh_token error should reference 'pdd auth login', "
-                f"not 'pdd login'. Got: {printed}"
-            )
+    async def test_missing_token_names_operator_configuration(self, manager):
+        with patch("pdd.remote_session.CloudConfig.get_jwt_token", return_value=None), patch("pdd.remote_session.console") as console:
+            assert not await manager._refresh_token()
+        printed = " ".join(str(call.args[0]) for call in console.print.call_args_list)
+        assert "PDD_CLOUD_TOKEN" in printed
 
     @pytest.mark.asyncio
     async def test_heartbeat_token_refresh_failure_shows_correct_command(
         self, manager, mock_cloud_config, mock_httpx_client
     ):
         """
-        Test that heartbeat loop references 'pdd auth login' when token refresh
+        Test that heartbeat loop names the bearer-token configuration when token refresh
         fails. This covers remote_session.py line 317.
         """
         manager.session_id = "sess-1"
@@ -1365,8 +1300,8 @@ class TestIssue470AuthCommandReferences:
             await run_heartbeat_briefly()
 
             printed = " ".join(str(call[0][0]) for call in mock_console.print.call_args_list if call[0])
-            assert "pdd auth login" in printed, (
-                "Heartbeat token refresh failure should reference 'pdd auth login', "
+            assert "PDD_CLOUD_TOKEN" in printed, (
+                "Heartbeat token refresh failure should name bearer-token configuration, "
                 f"not 'pdd login'. Got: {printed}"
             )
 
@@ -1375,7 +1310,7 @@ class TestIssue470AuthCommandReferences:
         self, manager, mock_cloud_config, mock_httpx_client
     ):
         """
-        Test that update_command references 'pdd auth login' when token refresh
+        Test that update_command names the bearer-token configuration when token refresh
         fails. This covers remote_session.py line 509.
         """
         manager.session_id = "sess-1"
@@ -1395,7 +1330,7 @@ class TestIssue470AuthCommandReferences:
                 await manager.update_command("cmd-123", status="completed")
 
             printed = " ".join(str(call[0][0]) for call in mock_console.print.call_args_list if call[0])
-            assert "pdd auth login" in printed, (
-                "update_command token refresh failure should reference 'pdd auth login', "
+            assert "PDD_CLOUD_TOKEN" in printed, (
+                "update_command token refresh failure should name bearer-token configuration, "
                 f"not 'pdd login'. Got: {printed}"
             )

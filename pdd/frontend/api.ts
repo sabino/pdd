@@ -1229,6 +1229,10 @@ class PDDApiClient {
 
   // Remote session operations
 
+  async getCloudConfiguration(): Promise<{ cloud_url: string; environment: string; cloud_enabled: boolean }> {
+    return this.request('/api/v1/config/cloud-url');
+  }
+
   /**
    * Get JWT token from local cache.
    * Returns null if not authenticated.
@@ -1249,12 +1253,15 @@ class PDDApiClient {
    */
   private async fetchCloudUrl(): Promise<string> {
     try {
-      const response = await this.request<{ cloud_url: string; environment: string }>('/api/v1/config/cloud-url');
+      const response = await this.getCloudConfiguration();
+      if (!response.cloud_enabled || !response.cloud_url) {
+        throw new Error('No self-hosted server configured');
+      }
       return response.cloud_url;
     } catch (error) {
-      console.warn('Failed to fetch cloud URL from server, using default:', error);
-      // Fallback to environment variable or staging default
-      return import.meta.env.VITE_CLOUD_URL || 'https://us-central1-prompt-driven-development.cloudfunctions.net';
+      const configuredUrl = import.meta.env.VITE_CLOUD_URL;
+      if (configuredUrl) return configuredUrl;
+      throw error;
     }
   }
 
@@ -1270,12 +1277,12 @@ class PDDApiClient {
 
   /**
    * List remote sessions for authenticated user.
-   * Fetches from cloud, requires JWT token.
+   * Uses the configured service and bearer token.
    */
   async listRemoteSessions(): Promise<RemoteSessionInfo[]> {
     const token = await this.getJWTToken();
     if (!token) {
-      throw new Error('Not authenticated. Please run: pdd auth login');
+      throw new Error('Configure PDD_CLOUD_URL and PDD_CLOUD_TOKEN for your server');
     }
 
     const cloudUrl = await this.getCloudUrl();
@@ -1303,7 +1310,7 @@ class PDDApiClient {
   async submitRemoteCommand(request: RemoteCommandRequest): Promise<{ commandId: string; status: string }> {
     const token = await this.getJWTToken();
     if (!token) {
-      throw new Error('Not authenticated. Please run: pdd auth login');
+      throw new Error('Configure PDD_CLOUD_URL and PDD_CLOUD_TOKEN for your server');
     }
 
     const cloudUrl = await this.getCloudUrl();
@@ -1312,6 +1319,7 @@ class PDDApiClient {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'Idempotency-Key': crypto.randomUUID(),
       },
       body: JSON.stringify(request),
     });
@@ -1334,7 +1342,7 @@ class PDDApiClient {
   ): Promise<RemoteCommandStatus | null> {
     const token = await this.getJWTToken();
     if (!token) {
-      throw new Error('Not authenticated. Please run: pdd auth login');
+      throw new Error('Configure PDD_CLOUD_URL and PDD_CLOUD_TOKEN for your server');
     }
 
     const cloudUrl = await this.getCloudUrl();
@@ -1388,7 +1396,7 @@ class PDDApiClient {
   }): Promise<{ success: boolean; message: string }> {
     const token = await this.getJWTToken();
     if (!token) {
-      throw new Error('Not authenticated. Please run: pdd auth login');
+      throw new Error('Configure PDD_CLOUD_URL and PDD_CLOUD_TOKEN for your server');
     }
 
     const cloudUrl = await this.getCloudUrl();

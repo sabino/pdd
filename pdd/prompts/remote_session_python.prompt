@@ -1,13 +1,11 @@
-<pdd-dependency>auth_service_python.prompt</pdd-dependency>
 
 % You are an expert Python engineer. Your goal is to write `pdd/remote_session.py`.
 
-<pdd-dependency>auth_service_python.prompt</pdd-dependency>
 
 % Role & Scope
   This module handles remote session management for PDD Connect. It enables users to run
-  `pdd connect` on any machine and access it remotely via PDD Cloud. The cloud acts as a
-  **message bus** - it relays commands from the browser to the CLI via Firestore.
+  `pdd connect` on any machine and access it remotely via the explicitly configured self-hosted server. The cloud acts as a
+  **message bus** - it relays commands from the browser to the CLI through the HTTP relay.
   No external tunnel (ngrok) is required - the cloud hosts everything.
 
 <include>context/python_preamble.prompt</include>
@@ -18,7 +16,7 @@
        created_at, last_heartbeat, status, metadata
      - Factory method `from_dict()` to parse cloud API responses
      - Handle ISO datetime strings with timezone (including 'Z' suffix)
-     - cloud_url is the URL users access in browser (e.g., https://pdd.dev/connect/{session_id})
+     - cloud_url is the URL users access in browser (e.g., https://your-server/connect/{session_id})
 
   2. **RemoteSessionError**:
      - Custom exception for session operations
@@ -43,10 +41,8 @@
      - `stop_command_polling()`: Stop command polling gracefully
      - `deregister()`: Call POST to `deregisterSession` endpoint on shutdown
      - Static `list_sessions(jwt_token)`: GET `listSessions` endpoint, return List[SessionInfo]
-     - `_refresh_token()`: Async method to refresh JWT token using Firebase refresh token
-       - Uses lock to prevent concurrent refresh attempts
-       - First checks if cached token was already refreshed by another coroutine
-       - Returns True on success, False on failure
+     - `_refresh_token()`: Reload CloudConfig bearer credentials under a lock. Return false when missing or unreadable.
+     - Generate a registration Idempotency-Key once per manager; reuse it across registration retries and reset on deregister.
 
   5. **Command Polling behavior**:
      - Poll cloud for pending commands every 5 seconds via `getCommands` endpoint
@@ -85,8 +81,6 @@
 
 % Dependencies
   <pdd.core.cloud><include select="class:CloudConfig">context/cloud_example.py</include></pdd.core.cloud>
-  <pdd.get_jwt_token><include select="def:get_jwt_token">context/get_jwt_token_example.py</include></pdd.get_jwt_token>
-  <pdd.auth_service><include select="def:get_refresh_token,def:verify_auth,def:get_cached_jwt">context/auth_service_example.py</include></pdd.auth_service>
 
 % Technical Constraints
   - Use httpx.AsyncClient for async HTTP (timeout 30s default, shorter for heartbeat/status)

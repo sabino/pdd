@@ -5,8 +5,8 @@
   It launches a local REST server that enables the web frontend
   to interact with PDD commands through a browser interface.
 
-  For authenticated users, it automatically registers with PDD Cloud for remote access.
-  The cloud acts as a message bus - commands from browser are relayed via Firestore.
+  Register with an explicitly configured self-hosted server for remote access.
+  The server relays browser commands to the connected machine through HTTP polling.
 
 <include>context/python_preamble.prompt</include>
 
@@ -78,14 +78,15 @@
      - Clean up server resources
      - If remote session registered: stop command listener, stop heartbeat, deregister
 
-  8. **Cloud registration** (automatic for authenticated users):
-     - Check if user is authenticated via CloudConfig.get_jwt_token()
-     - If authenticated AND not --local-only:
+  8. **Self-hosted registration**:
+     - Require CloudConfig.is_server_configured() and not --local-only before reading the token.
+     - Unconfigured clients run locally without initiating authentication.
+     - If configured AND not --local-only:
        - Create RemoteSessionManager with jwt_token and project_path
        - Call register() to get cloud URL (no public URL needed - cloud hosts everything)
        - Start heartbeat background task
-       - Start command listener for Firestore message bus
-       - Confirm registration to the user (the cloud access URL display is deferred until the production /connect page is deployed; the URL is captured but not printed)
+       - Start command polling through the HTTP relay
+       - Confirm registration and print the returned remote dashboard URL.
        - Use set_active_session_manager() to store for server access
      - If not authenticated or --local-only:
        - Run in local-only mode (existing behavior)
@@ -112,3 +113,6 @@
 % Deliverables
   - Code: `pdd/commands/connect.py`
   - Export: `connect` command function
+
+Use only local frontend origins and an explicit --frontend-url for local-server CORS.
+Remove vendor dashboard origins. Service registration is independent of the --local inference flag.

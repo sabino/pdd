@@ -2,14 +2,14 @@
 Remote Session Management for PDD Connect.
 
 This module handles remote session management for PDD Connect. It enables users to run
-`pdd connect` on any machine and access it remotely via PDD Cloud. The cloud acts as a
-message bus - it relays commands from the browser to the CLI via Firestore.
+`pdd connect` on any machine and access it remotely via a self-hosted server. The cloud acts as a
+message bus - it relays commands from the browser to the CLI through the HTTP relay.
 No external tunnel (ngrok) is required - the cloud hosts everything.
 
 Key features for session reliability:
 - Immediate first heartbeat on startup (prevents early session timeout)
 - 30-second heartbeat interval with 3 retries and exponential backoff
-- Automatic JWT token refresh on 401 errors (handles token expiration)
+- Reload operator-rotated bearer tokens after 401 responses
 - Graceful handling of network errors during long-running operations
 """
 
@@ -21,6 +21,7 @@ import datetime
 import platform
 import socket
 import sys
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -30,7 +31,6 @@ from rich.console import Console
 from rich.markup import escape as rich_escape
 
 from .core.cloud import CloudConfig
-from .get_jwt_token import _get_cached_jwt, FirebaseAuthenticator, KEYRING_AVAILABLE
 
 console = Console()
 
@@ -64,7 +64,7 @@ class SessionInfo:
     Represents a remote PDD session discovered from the cloud.
 
     The cloud_url is the URL users can access in their browser to interact
-    with this session (e.g., https://pdd.dev/connect/{session_id}).
+    with this session (e.g., https://your-server/connect/{session_id}).
     """
     session_id: str
     cloud_url: str
@@ -101,7 +101,7 @@ class SessionInfo:
 @dataclass
 class CommandInfo:
     """
-    Represents a command from the Firestore message bus.
+    Represents a command from the HTTP relay.
 
     Commands are created by the browser and picked up by the CLI for execution.
     """
@@ -136,14 +136,14 @@ class RemoteSessionManager:
     """
     Manages the lifecycle of a remote session: registration, heartbeats, and deregistration.
 
-    The cloud acts as a message bus - commands from the browser are relayed via Firestore.
+    The cloud acts as a message bus - commands from the browser are relayed through the HTTP relay.
     No external tunnel is required; the cloud generates the access URL.
 
     Session reliability features:
     - Heartbeats are sent immediately on startup, then every 30 seconds
     - Heartbeat failures trigger 3 retries with exponential backoff (1s, 2s, 4s)
-    - 401 errors (token expiration) trigger automatic JWT token refresh
-    - Command polling also handles 401 errors with automatic token refresh
+    - 401 errors trigger a configured bearer-token reload
+    - Command polling also reloads configured tokens after 401 responses
     """
 
     def __init__(self, jwt_token: str, project_path: Path, server_port: int = 9876):
@@ -157,6 +157,7 @@ class RemoteSessionManager:
         self._stop_event: Optional[asyncio.Event] = None
         self._client_timeout = 30.0
         self._token_refresh_lock = asyncio.Lock()
+        self._registration_key = uuid.uuid4().hex
 
     def _get_headers(self) -> Dict[str, str]:
         return {
@@ -165,55 +166,19 @@ class RemoteSessionManager:
         }
 
     async def _refresh_token(self) -> bool:
-        """
-        Attempt to refresh the JWT token using the stored refresh token.
-
-        Returns:
-            bool: True if token was successfully refreshed, False otherwise.
-        """
-        import os
-        from .get_jwt_token import _cache_jwt
-
+        """Reload an operator-rotated token without an identity exchange."""
         async with self._token_refresh_lock:
-            # First check if another coroutine already refreshed the token
-            cached_jwt = _get_cached_jwt()
-            if cached_jwt and cached_jwt != self.jwt_token:
-                self.jwt_token = cached_jwt
-                console.print("[green]JWT token refreshed from cache[/green]")
-                return True
-
-            # Try to refresh using the Firebase refresh token
-            firebase_api_key = os.environ.get("NEXT_PUBLIC_FIREBASE_API_KEY")
-            if not firebase_api_key:
-                console.print("[yellow]Cannot refresh token: NEXT_PUBLIC_FIREBASE_API_KEY not set[/yellow]")
-                return False
-
-            if not KEYRING_AVAILABLE:
-                console.print("[yellow]Cannot refresh token: keyring not available[/yellow]")
-                return False
-
             try:
-                firebase_auth = FirebaseAuthenticator(firebase_api_key, "PDD Code Generator")
-                refresh_token = firebase_auth._get_stored_refresh_token()
-
-                if not refresh_token:
-                    console.print("[yellow]Cannot refresh token: no refresh token stored. Please run 'pdd auth login' again.[/yellow]")
-                    return False
-
-                # Refresh the token
-                new_id_token = await firebase_auth._refresh_firebase_token(refresh_token)
-                if new_id_token:
-                    self.jwt_token = new_id_token
-                    _cache_jwt(new_id_token)
-                    console.print("[green]JWT token refreshed successfully[/green]")
-                    return True
-                else:
-                    console.print("[yellow]Token refresh returned empty token[/yellow]")
-                    return False
-
-            except Exception as e:
-                console.print(f"[yellow]Failed to refresh JWT token: {e}[/yellow]")
+                token = CloudConfig.get_jwt_token()
+            except (OSError, ValueError):
+                console.print("[red]Check PDD_CLOUD_URL and PDD_CLOUD_TOKEN_FILE.[/red]")
                 return False
+            if token and token != self.jwt_token:
+                self.jwt_token = token
+                return True
+            if not token:
+                console.print("[red]Set PDD_CLOUD_TOKEN or PDD_CLOUD_TOKEN_FILE.[/red]")
+            return False
 
     def _get_metadata(self) -> Dict[str, Any]:
         return {
@@ -233,7 +198,7 @@ class RemoteSessionManager:
             session_name: Optional custom name for the session.
 
         Returns:
-            str: The cloud access URL (e.g., https://pdd.dev/connect/{session_id}).
+            str: The cloud access URL (e.g., https://your-server/connect/{session_id}).
 
         Raises:
             RemoteSessionError: If registration fails.
@@ -252,7 +217,7 @@ class RemoteSessionManager:
                 response = await client.post(
                     endpoint,
                     json=payload,
-                    headers=self._get_headers()
+                    headers={**self._get_headers(), "Idempotency-Key": self._registration_key}
                 )
 
                 if response.status_code >= 400:
@@ -310,12 +275,12 @@ class RemoteSessionManager:
                             if response.status_code == 401:
                                 # Token expired - try to refresh
                                 if not token_refreshed:
-                                    console.print("[yellow]JWT token expired, attempting refresh...[/yellow]")
+                                    console.print("[yellow]Bearer token rejected, checking for operator rotation...[/yellow]")
                                     if await self._refresh_token():
                                         token_refreshed = True
                                         continue  # Retry with new token
                                     else:
-                                        console.print("[red]Token refresh failed. Please run 'pdd auth login' to re-authenticate.[/red]")
+                                        console.print("[red]Token reload failed. Check PDD_CLOUD_TOKEN or PDD_CLOUD_TOKEN_FILE.[/red]")
                                         break
                                 else:
                                     console.print("[red]Heartbeat still failing after token refresh (Status: 401)[/red]")
@@ -398,7 +363,7 @@ class RemoteSessionManager:
                 )
 
                 if response.status_code < 400:
-                    console.print("[dim]Session deregistered from cloud.[/dim]")
+                    console.print("[dim]Session deregistered from server.[/dim]")
                     success = True
                 else:
                     console.print(f"[yellow]Warning: Failed to deregister session (Status: {response.status_code})[/yellow]")
@@ -408,6 +373,7 @@ class RemoteSessionManager:
                 console.print(f"[yellow]Warning: Error deregistering session: {str(e)}[/yellow]")
             finally:
                 self.session_id = None
+                self._registration_key = uuid.uuid4().hex
 
         return success
 
@@ -509,12 +475,12 @@ class RemoteSessionManager:
                     if result.status_code == 401:
                         # Token expired - try to refresh once
                         if not token_refreshed:
-                            console.print("[yellow]JWT token expired during command update, attempting refresh...[/yellow]")
+                            console.print("[yellow]Bearer token rejected during command update, checking for rotation...[/yellow]")
                             if await self._refresh_token():
                                 token_refreshed = True
                                 continue  # Retry with new token
                             else:
-                                console.print("[red]Token refresh failed. Please run 'pdd auth login' to re-authenticate.[/red]")
+                                console.print("[red]Token reload failed. Check PDD_CLOUD_TOKEN or PDD_CLOUD_TOKEN_FILE.[/red]")
                                 raise RuntimeError("Authentication failed: token expired and refresh failed")
                         else:
                             console.print("[red]Command update still failing after token refresh (Status: 401)[/red]")
@@ -615,7 +581,7 @@ class RemoteSessionManager:
         cmd_options = cmd.payload.get("options", {})
 
         # Defensive parsing: handle cases where arrays might arrive as stringified JSON
-        # This can happen if the cloud/Firestore serializes arrays incorrectly
+        # This can happen if the older clients serialize arrays as strings
         def parse_if_stringified_list(value):
             """Parse value if it looks like a stringified Python list."""
             if isinstance(value, str):

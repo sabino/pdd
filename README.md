@@ -13,14 +13,20 @@ durable intent, constraints, examples, and tests, then compile that source into
 whatever implementation language the project needs. Code remains real and
 reviewable, but it is no longer the primary source of truth.
 
-**Getting started is simple:**
+This fork runs locally by default. Optional remote services run through the
+`pdd.cloud_server` namespace. PDD Cloud login is replaced by operator-owned bearer tokens.
 
 ```bash
-# Install and run
-uv tool install pdd-cli
-pdd setup
-pdd connect
+# From this checkout, with uv >=0.12 and Bun 1.4.2
+uv sync --locked --extra dev
+(cd pdd/frontend && bun ci && bun --bun run build)
+
+# From your project directory
+/path/to/pdd/.venv/bin/pdd --local connect --local-only
 ```
+
+See [self-hosting](docs/self-hosting.md) for service startup and migration.
+The published `pdd-cli` package remains upstream; use this checkout or its built wheel.
 
 This launches a web interface at `localhost:9876` where you can:
 - Implement GitHub issues automatically
@@ -191,7 +197,7 @@ pdd connect
 This opens a browser-based interface where you can:
 - **Run Commands**: Execute `pdd change`, `pdd bug`, `pdd fix`, `pdd sync` etc. visually
 - **Browse Files**: View and edit prompts, code, and tests in your project
-- **Remote Access**: Access your session from any browser via PDD Cloud (use `--local-only` to disable)
+- **Remote Access**: Access your session through a configured self-hosted server (use `--local-only` to disable registration)
 
 ### Option 2: Issue-Driven CLI
 
@@ -330,26 +336,19 @@ If you skip this step, the first regular pdd command you run will detect the mis
 
 
 
-## Cloud vs Local Execution
+## Local and Self-hosted Execution
 
-PDD commands can be run either in the cloud or locally. By default, all commands run in the cloud mode, which provides several advantages:
+Commands use local provider credentials by default. `--local` explicitly keeps
+model execution local; `connect --local-only` skips remote registration.
+Local execution can still call model-provider APIs. Use a local model for offline inference.
 
-- No need to manage API keys locally
-- Access to more powerful models
-- Shared examples and improvements across the PDD community
-- Automatic updates and improvements
-- Better cost optimization
+To use your server, configure `PDD_CLOUD_URL` and `PDD_CLOUD_TOKEN` or
+`PDD_CLOUD_TOKEN_FILE`. The endpoint names remain compatible with the CLI adapters.
+`pdd auth login` verifies these credentials; it starts no GitHub or Firebase login.
 
-### Cloud Authentication
-
-When running in cloud mode (default), PDD uses GitHub Single Sign-On (SSO) for authentication. On first use, you'll be prompted to authenticate:
-
-1. PDD will open your default browser to the GitHub login page
-2. Log in with your GitHub account
-3. Authorize PDD Cloud to access your GitHub profile
-4. Once authenticated, you can return to your terminal to continue using PDD
-
-The authentication token is securely stored locally and automatically refreshed as needed.
+The self-hosted server supplies model execution, remote command relay, and a private
+example library. See [startup and operations](docs/self-hosting.md) and the
+[HTTP contract](docs/cloud-server-api.md).
 
 ### Local Mode Requirements
 
@@ -732,7 +731,7 @@ graph TB
 - **[`trace`](#13-trace)**: Finds the corresponding line number in a prompt file for a given code line
 
 ### Utility Commands
-- **[`auth`](#19-auth)**: Manages authentication with PDD Cloud
+- **[`auth`](#19-auth)**: Manages self-hosted bearer-token configuration
 - **[`sessions`](#20-pdd-sessions---manage-remote-sessions)**: Manage remote sessions for `connect`
 - **[`report-core`](#report-core-command)**: Create a GitHub issue from a debug snapshot
 - **`contracts check`**: Run deterministic contract section checks; see [docs/contract_check.md](docs/contract_check.md)
@@ -3294,7 +3293,7 @@ This is distinct from PR review-loop **deterministic gates** (`--no-gates` / `ch
 The web interface provides:
 - **Command Execution**: Run any PDD command (`pdd change`, `pdd bug`, `pdd fix`, `pdd sync`, etc.) with visual feedback
 - **File Browser**: View and edit prompts, code, and tests in your project
-- **Remote Access**: Access your session from any browser via PDD Cloud
+- **Remote Access**: Access your session through a configured self-hosted server
 - **Session Management**: Run multiple sessions with custom names
 
 ```bash
@@ -3308,7 +3307,7 @@ Options:
 - `--token TEXT`: Bearer token for authentication. Recommended when using `--allow-remote`.
 - `--no-browser`: Don't open the browser automatically when starting the server.
 - `--frontend-url TEXT`: Custom frontend URL to open instead of the default.
-- `--local-only`: Skip cloud registration and run in local-only mode. The session will not be accessible remotely via PDD Cloud.
+- `--local-only`: Skip cloud registration and run in local-only mode. The session is available through the local server.
 - `--session-name TEXT`: Custom session name for identification. Useful when running multiple sessions.
 
 The command starts a FastAPI server and automatically opens the web interface in your default browser. The server also provides:
@@ -3316,7 +3315,8 @@ The command starts a FastAPI server and automatically opens the web interface in
 - API documentation at `http://localhost:9876/docs`
 
 **Remote Session Registration:**
-By default, `pdd connect` registers with PDD Cloud, allowing you to access your session remotely from any browser. The session is automatically deregistered on graceful shutdown (Ctrl+C).
+`pdd connect` registers only when a self-hosted URL and bearer token are configured.
+The session is deregistered on graceful shutdown (Ctrl+C).
 
 Security Notes:
 - By default, the server only accepts connections from localhost (127.0.0.1).
@@ -3345,76 +3345,22 @@ pdd connect --session-name "my-dev-server"
 
 ### 19. auth
 
-Manages authentication with PDD Cloud. The `auth` command provides subcommands for signing in, signing out, checking status, and retrieving authentication tokens.
+Inspect or verify the configured self-hosted server credentials.
 
 ```bash
-pdd [GLOBAL OPTIONS] auth SUBCOMMAND [OPTIONS]
+pdd auth status           # Inspect configuration without contacting the server
+pdd auth status --verify  # Check listSessions with the configured bearer token
+pdd auth login            # Perform the same connection check
+pdd auth token --format json
 ```
 
-#### Subcommands
-
-##### auth login
-
-Signs in to PDD Cloud. Opens a web browser to complete the authentication process with an ephemeral code.
-
-```bash
-pdd auth login
-```
-
-##### auth status
-
-Displays the active account and current authentication state. Exit code is 0 if authenticated, 1 otherwise.
-
-```bash
-pdd auth status [OPTIONS]
-```
-
-**Options:**
-- `--verify`: Verify authentication by actually attempting to refresh the token. Without this flag, only cached credentials are checked.
-
-**Examples:**
-```bash
-# Quick check (uses cached credentials)
-pdd auth status
-
-# Deep verification (attempts token refresh)
-pdd auth status --verify
-```
-
-**Note:** If only a refresh token exists (no cached JWT), the status will show a warning that the token is expired and will refresh on next use. Use `--verify` to actually test if the refresh will succeed, or run `pdd auth login` to refresh the token immediately.
-
-##### auth logout
-
-Removes the stored authentication configuration for a PDD Cloud account locally.
-
-```bash
-pdd auth logout
-```
-
-##### auth token
-
-Outputs the authentication token for the current account. Useful for scripts or programmatic access to PDD Cloud.
-
-```bash
-pdd auth token [OPTIONS]
-```
-
-**Options:**
-- `--format [raw|json]`: Output format for the token. Use `raw` for just the token string (default), or `json` for structured output including token and expiration time.
-
-##### auth clear-cache
-
-Clears the cached JWT token at `~/.pdd/jwt_cache`. Use it when switching environments or recovering from token audience/cache issues, then authenticate again with `pdd auth login`.
-
-```bash
-pdd auth clear-cache
-```
-
-**When to use**: Use `auth` commands to manage your PDD Cloud authentication state. Use `auth login` to authenticate before using cloud features, `auth status` to verify your current session, `auth token` when you need to pass credentials to scripts or other tools, and `auth clear-cache` when cached JWT state is stale.
+`auth token` explicitly prints the configured token. `auth logout` explains how
+to unset credentials and revoke them on the server. `auth clear-cache` reports
+that bearer authentication has no cache. Neither command deletes legacy identity caches.
 
 ### 20. `pdd sessions` - Manage Remote Sessions
 
-The `sessions` command group allows you to manage remote PDD sessions registered with PDD Cloud. Remote sessions enable you to control PDD instances running on other machines through the web frontend.
+The `sessions` command group allows you to manage remote PDD sessions registered with your self-hosted server. Remote sessions enable you to control PDD instances running on other machines through the web frontend.
 
 #### List Sessions
 
@@ -3714,7 +3660,7 @@ PDD uses several environment variables to customize its behavior:
 - **`PDD_CLOUD_TIMEOUT`**: Cloud request timeout in seconds. Default is 900 (15 minutes). Increase this value if you experience timeouts with long-running cloud operations.
 - **`PDD_MODULE_TIMEOUT_SECONDS`**: Per-module wall-clock cap for `pdd sync --agentic` runs in seconds. Default is 2700 (45 minutes).
 - **`PDD_SYNC_MAX_WORKERS`**: Maximum number of modules `pdd sync` (agentic and durable issue sync) runs concurrently. Default is 4; values are clamped to the range 1–4 (non-integer values fall back to 4). Lower it (e.g. `PDD_SYNC_MAX_WORKERS=1`) to reduce peak memory on constrained runners such as Cloud Run. A sync given an explicit `--budget` always runs sequentially regardless of this value; durable runs honor an explicit `--durable-max-parallel` over this default.
-- **`PDD_AUTO_SUBMIT_AUTH_TIMEOUT_S`**: Timeout in seconds for the JWT auth call used by `pdd sync` / `pdd fix --auto-submit` example submission. Default is 300 (5 minutes). Auto-submit is skipped automatically when running inside a Cloud Run / Cloud Functions executor.
+- **`PDD_AUTO_SUBMIT_EXAMPLES`**: Set to a truthy value to upload successful sync examples to the configured service. Disabled by default. Uploads remain private.
 
 ### Configuration Priority
 
@@ -3796,24 +3742,14 @@ PDD provides informative error messages when issues occur during command executi
 
 When an error occurs, PDD will display a message describing the issue and, when possible, suggest steps to resolve it.
 
-## Cloud Features
+## Optional self-hosted service
 
-When running in cloud mode (default), PDD provides additional features:
+Local execution is the default. Configure a service URL and bearer token to enable remote APIs.
+The service supports model inference, remote command relay, and a private example library.
+Its dashboard runs at `/cloud` on your service. Examples can be shared with authenticated service users.
 
-1. **Shared Examples**: Access to a growing database of community-contributed examples
-2. **Automatic Updates**: Latest improvements and bug fixes are automatically available
-3. **Cost Optimization**: Smart model selection and caching to minimize costs
-4. **Usage Analytics**: Track your team's usage and costs through the PDD Cloud dashboard
-5. **Collaboration**: Share prompts and generated code with team members
-
-To access the PDD Cloud dashboard: https://promptdriven.ai/
-
-Here you can:
-- View usage statistics
-- Manage team access
-- Configure default settings
-- Access shared examples
-- Track costs
+Hosted subscriptions, credit accounting, marketplace access, and team usage analytics are removed from this fork's service paths.
+See [self-hosting](docs/self-hosting.md) for setup and validation limits.
 
 ## Troubleshooting
 
@@ -3841,7 +3777,7 @@ Here are some common issues and their solutions:
    - Check internet connection
    - Try running with `--local` flag to compare
    - Increase timeout with `export PDD_CLOUD_TIMEOUT=1800` (30 minutes) for long-running operations
-   - If persistent, check PDD Cloud status page
+   - If persistent, inspect your configured server's logs
 
 8. **Context Window Overflow**: If you see "Prompt exceeds context limit" errors:
    - The error message includes token count and model limit — use this to gauge how much to reduce
@@ -3876,22 +3812,10 @@ When using PDD, keep the following security considerations in mind:
 
 6. **Dependency Analysis**: When using the `auto-deps` command, be cautious with untrusted dependency files and verify the generated summaries before including them in your prompts.
 
-When using PDD in cloud mode:
-
-1. **Authentication**: 
-   - PDD uses GitHub SSO for secure authentication
-   - Tokens are stored securely in your system's credential manager
-   - No need to manage API keys manually
-
-2. **Data Privacy**:
-   - All data is encrypted in transit and at rest
-   - Prompts and generated code are associated only with your account
-   - You can delete your data at any time through the dashboard
-
-3. **Team Access**:
-   - Manage team member access through GitHub organizations
-   - Set up fine-grained permissions for different commands
-   - Track usage per team member
+When using the self-hosted service, tokens identify owners and grant access to their connected machines.
+The operator manages token rotation, HTTPS, backups, and retention.
+SQLite stores sessions, command results, and examples. Examples are private unless explicitly shared.
+See [operation guidance](docs/self-hosting.md#operate-your-deployment) before exposing the service beyond loopback.
 
 Additionally:
 - Consider disabling auto-updates in production environments using `PDD_AUTO_UPDATE=false`
@@ -4195,7 +4119,9 @@ If you have a ChatGPT subscription, PDD can use it for LLM calls when no API key
 codex login
 ```
 
-PDD reads the resulting `~/.codex/auth.json` and routes fallback calls through the `chatgpt/*` model family on your subscription (flat-rate, no per-token API billing). This is for your own personal subscription only — do not share or pool a single subscription across users. **This is a LOCAL execution path.** The subscription token is a local file, so it is only used on the local llm_invoke route. If you have PDD Cloud configured (`PDD_JWT_TOKEN`, or `FIREBASE_API_KEY` + `GITHUB_CLIENT_ID`), cloud is the default route and does NOT carry the subscription — pass `--local` (or set `PDD_FORCE_LOCAL=1`) to force the local subscription path. Users without cloud credentials already run locally and need no flag.
+PDD reads `~/.codex/auth.json` for the `chatgpt/*` model family. Keep subscription credentials local to their owner.
+Local execution is the default. If a self-hosted service is configured, use `--local` to keep inference on this machine.
+Service requests use the service's provider credentials; they do not carry the client's subscription token.
 
 **Available subscription models** (selectable via `PDD_MODEL_DEFAULT` or `pdd setup`): `chatgpt/gpt-5.6-sol`, `chatgpt/gpt-5.5`, `chatgpt/gpt-5.4`, `chatgpt/gpt-5.3-codex`, `chatgpt/gpt-5.2`, `chatgpt/gpt-5.3-codex-spark`. `--strength` picks a higher- or lower-ranked model within the family, just like the Anthropic models. For direct/local LiteLLM calls, `PDD_MODEL_DEFAULT` selects the subscription model; agentic Codex CLI workflows use the separate `CODEX_MODEL` override and default to GPT-5.6 by forwarding the same runtime-supported `gpt-5.6-sol` backend slug. The direct OpenAI API catalog remains a separate bare `gpt-5.6` row using `OPENAI_API_KEY`. These are distinct selection paths. (Exact subscription models depend on what your ChatGPT plan serves.)
 

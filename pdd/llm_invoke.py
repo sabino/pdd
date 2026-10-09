@@ -2,6 +2,7 @@
 # Added optional debugging prints in _select_model_candidates
 
 import copy
+from pdd.core.execution import is_server_execution
 import csv
 import getpass
 import os
@@ -969,7 +970,7 @@ def _llm_invoke_cloud(
     output_schema: Optional[Dict[str, Any]],
     time: float,
     use_batch_mode: bool,
-    messages: Optional[Union[List[Dict[str, str]], List[List[Dict[str, str]]]]],
+    messages: Optional[Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]]],
     language: Optional[str],
     grounding_overrides: Optional[Dict[str, List[str]]] = None,
     source_prompt: Optional[str] = None,
@@ -1118,17 +1119,10 @@ def _llm_invoke_cloud(
             raise InsufficientCreditsError(error_msg)
 
         elif response.status_code in (401, 403):
-            # Clear stale JWT cache to prevent repeated failures
-            try:
-                from pdd.auth_service import clear_jwt_cache
-                clear_jwt_cache()
-            except Exception:
-                pass  # Don't fail if cache clearing fails
-
             server_error = response.json().get("error", "")
             error_msg = (
-                f"Authentication expired ({server_error or response.status_code}). "
-                "Please re-authenticate with: pdd auth logout && pdd auth login"
+                f"Authentication failed ({server_error or response.status_code}). "
+                "Check PDD_CLOUD_TOKEN or PDD_CLOUD_TOKEN_FILE for your server"
             )
             raise CloudFallbackError(error_msg)
 
@@ -3403,7 +3397,7 @@ def _clean_optional_scalar(value: Any) -> Optional[str]:
 
 def _interactive_credential_acquisition_allowed() -> bool:
     """Whether API-key setup may prompt interactively in this process."""
-    return not (_env_truthy("PDD_FORCE") or _is_cloud_runtime())
+    return not (is_server_execution() or _env_truthy("PDD_FORCE") or _is_cloud_runtime())
 
 
 def _vertex_project_value() -> Optional[str]:
@@ -4679,7 +4673,7 @@ def llm_invoke(
     output_schema: Optional[Dict[str, Any]] = None,
     time: Optional[float] = 0.25,
     use_batch_mode: bool = False,
-    messages: Optional[Union[List[Dict[str, str]], List[List[Dict[str, str]]]]] = None,
+    messages: Optional[Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]]] = None,
     language: Optional[str] = None,
     use_cloud: Optional[bool] = None,
     grounding_overrides: Optional[Dict[str, List[str]]] = None,
@@ -4869,7 +4863,9 @@ def llm_invoke(
 
     # --- 1. Cloud Execution Path ---
     # Determine cloud usage: explicit param > environment > default (local)
-    if use_cloud is None:
+    if is_server_execution():
+        use_cloud = False
+    elif use_cloud is None:
         # Check environment for cloud preference
         # PDD_FORCE_LOCAL=1 forces local execution
         force_local = os.environ.get("PDD_FORCE_LOCAL", "").lower() in ("1", "true", "yes")

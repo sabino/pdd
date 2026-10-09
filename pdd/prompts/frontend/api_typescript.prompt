@@ -142,7 +142,7 @@
    - `rearrangeGraphLayout(architecturePath='architecture.json')` -> POST `/api/v1/architecture/rearrange` with `{ architecture_path: architecturePath }`
    - `generateArchitectureFromIssue(issueUrl, options={})` -> POST `/api/v1/architecture/generate-from-issue` with `{ issue_url, verbose: options.verbose ?? false, quiet: options.quiet ?? false }`
    - `getJWTToken()` -> GET `/api/v1/auth/jwt-token`, returns `jwt`, catches and returns `null`
-   - `fetchCloudUrl()` -> GET `/api/v1/config/cloud-url`, on failure `console.warn(...)` and fallback `import.meta.env.VITE_CLOUD_URL || 'https://us-central1-prompt-driven-development.cloudfunctions.net'`
+   - `fetchCloudUrl()` -> GET `/api/v1/config/cloud-url`, require cloud_enabled and cloud_url; use only explicit VITE_CLOUD_URL when discovery fails, otherwise throw a configuration error
    - `listExtracts(checkFreshness=true)` -> GET `/api/v1/extracts?check_freshness=${checkFreshness}`
    - `getExtract(cacheKey)` -> GET `/api/v1/extracts/${cacheKey}`
    - `getExtractsForPrompt(promptPath)` -> GET `/api/v1/extracts/for-prompt?prompt_path=${encodeURIComponent(promptPath)}`
@@ -183,7 +183,7 @@
 8) Remote cloud session behavior:
    - `getCloudUrl()` caches `fetchCloudUrl()` in `cachedCloudUrl`.
    - `listRemoteSessions`, `submitRemoteCommand`, `getRemoteCommandStatus`, `cancelRemoteCommand` all:
-     - require token from `getJWTToken()`, else throw `new Error('Not authenticated. Please run: pdd auth login')`
+     - require token from `getJWTToken()`, else throw `new Error('Configure PDD_CLOUD_URL and PDD_CLOUD_TOKEN for your server')`
      - call cloud endpoints `/listSessions`, `/submitCommand`, `/getCommandStatus?...`, `/cancelCommand`
      - use Bearer token + JSON headers
      - on non-OK parse `{ error: response.statusText }` fallback and throw endpoint-specific message
@@ -214,3 +214,8 @@
 - Preserve API compatibility exactly: exported type names, method names, snake_case keys, optional fields, and literal unions.
 - Keep return types explicit; keep `any` only where currently required by the contracts above.
 - No external runtime dependencies beyond `yaml`; do not import frontend UI modules here.
+
+Expose getCloudConfiguration() returning cloud_url, environment, and cloud_enabled.
+Use configured bearer credentials through the legacy jwt-token response.
+submitRemoteCommand sends Idempotency-Key using crypto.randomUUID().
+Remote API errors explain PDD_CLOUD_URL and PDD_CLOUD_TOKEN; initiate no OAuth.

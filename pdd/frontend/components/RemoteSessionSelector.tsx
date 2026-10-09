@@ -173,14 +173,14 @@ const RemoteSessionSelector: React.FC<RemoteSessionSelectorProps> = ({
             <div className="mt-2 pt-2 border-t border-surface-700">
               <div className="text-surface-500 mb-1">Troubleshooting:</div>
               <ul className="list-disc list-inside space-y-0.5 text-surface-400">
-                {error?.includes('Not authenticated') && (
-                  <li>Not authenticated. Run: pdd auth login</li>
+                {(error?.includes('Not authenticated') || error?.includes('Configure PDD_CLOUD')) && (
+                  <li>Configure PDD_CLOUD_URL and PDD_CLOUD_TOKEN or PDD_CLOUD_TOKEN_FILE.</li>
                 )}
-                {error?.includes('401') || error?.includes('403') && (
-                  <li>JWT token expired or invalid. Try: source setup_staging_env.sh</li>
+                {(error?.includes('401') || error?.includes('403')) && (
+                  <li>Server rejected the bearer token. Check the configured token and restart pdd connect.</li>
                 )}
-                {error?.includes('timeout') || error?.includes('network') && (
-                  <li>Network issue. Check cloud connectivity.</li>
+                {(error?.includes('timeout') || error?.includes('network')) && (
+                  <li>Network issue. Check connectivity to your configured server.</li>
                 )}
                 {!error && sessions.length === 0 && (
                   <li>No sessions found. Start one with: pdd connect</li>

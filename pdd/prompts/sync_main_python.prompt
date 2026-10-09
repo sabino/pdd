@@ -126,18 +126,13 @@
     - Include snapshot status and artifact paths from generation in the one-session summary/result when available, without displaying sensitive artifact contents or forbidden detail strings.
     - If code generation fails (code file still missing), return failure without proceeding to one-session
     - **Post-sync**: Save fingerprint via `save_fingerprint()` so next sync sees files as up-to-date
-    - **Auto-submit**: On success and not local mode, call `_auto_submit_example()` to submit the example to PDD Cloud
+    - **Auto-submit**: On success and not local mode, call `_auto_submit_example()` to submit the example after explicit operator opt-in
 
-9. **Auto-Submit Example** (`_auto_submit_example` helper):
-    - Skip if `PDD_FORCE_LOCAL` env var is set
-    - Skip if `CloudConfig.is_running_in_cloud()` returns True (interactive Device Flow cannot complete in headless executors)
-    - Before calling the lower-level async `get_jwt_token(...)`, call `CloudConfig.ensure_default_env()` so `PDD_CLOUD_URL` infers staging/prod/local before cached JWT audience validation. This prevents a prod cached JWT from being reused against a staging `submitExample` URL (#859 follow-up).
-    - Bound the JWT fetch with `asyncio.wait_for(get_jwt_token(...), timeout=auth_timeout_s)` where `auth_timeout_s` is `float(os.environ.get('PDD_AUTO_SUBMIT_AUTH_TIMEOUT_S', '300'))` parsed defensively (`try/except (TypeError, ValueError)` falls back to `300.0`). On `asyncio.TimeoutError` / `TimeoutError`, emit a yellow warning and return.
-    - Get JWT token via `get_jwt_token()` with Firebase API key and GitHub client ID from env
-    - Preprocess prompt content via `preprocess()` with `recursive=False` and `double_curly_brackets=True`
-    - Build payload with command="fix", prompt/code/example/test files, metadata (title, language, tags)
-    - POST to `CloudConfig.get_endpoint_url("submitExample")` (imported from `pdd.core.cloud`) with Bearer token, so `PDD_CLOUD_URL` is honored for staging/prod/local — never hardcode the production `submitExample` URL (#859, Firebase audience mismatch under staging canary). The `requests.post` call MUST pass `timeout=get_cloud_request_timeout()` (imported from `pdd.core.cloud`) — omitting `timeout=` makes the client wait forever if the upstream cloud stalls mid-response and is the documented hang source for #1272
-    - Log success/failure (only if not quiet mode)
+9. **Auto-Submit Example** (_auto_submit_example helper):
+    - Require truthy PDD_AUTO_SUBMIT_EXAMPLES and configured server credentials.
+    - Skip force-local and server execution. Read CloudConfig.get_jwt_token without any identity exchange.
+    - Read/preprocess inputs, include available examples/tests, and set metadata.isPublic=false.
+    - POST submitExample with get_cloud_request_timeout(). Respect quiet output.
 
 10. **Multi-Language Processing**:
     - Process each detected language separately via sync_orchestration (or one-session mode)
@@ -147,7 +142,7 @@
     - Skip subsequent languages if budget exhausted
     - Aggregate results and costs from all language syncs
     - Forward steerability controls (`no_steer`, resolved `steer_timeout`), `compress`, `evidence`, and #877 compression flags (`compress_examples`, `compress_test_context`, `context_compression`, `compression_fallback`) to each sync_orchestration call
-    - **Auto-submit on success**: After sync_orchestration returns success for a language (and not local mode), call `_auto_submit_example()` to submit the prompt+code pair to PDD Cloud, same as one-session mode. Use `get_pdd_file_paths()` to resolve the module file paths needed for submission. Wrap in try/except and log warnings on failure (do not abort sync).
+    - **Auto-submit on success**: After sync_orchestration returns success for a language (and not local mode), call `_auto_submit_example()` to submit the private prompt/code pair after explicit operator opt-in, same as one-session mode. Use `get_pdd_file_paths()` to resolve the module file paths needed for submission. Wrap in try/except and log warnings on failure (do not abort sync).
 
 11. User Feedback (unless quiet=True):
     - Show sync progress summary before starting (detected context, languages, settings)
@@ -216,15 +211,8 @@
     - **Directory-prefixed basename handling**: when `basename` is directory-prefixed (e.g. `core/cloud`) and `prompts_dir` does NOT already end with that prefix, the recursive pattern must include the dir_part (`**/{dir_part}/{name_part}_*.prompt`), not just `**/{name_part}_*.prompt`. Otherwise unrelated files like `other/cloud_*.prompt` in sibling subtrees would false-match and trigger spurious collision warnings.
     - **Collision detection**: when the recursive search returns multiple matches in *different parent directories* for the same basename, emit a yellow warning via `rprint("[yellow]Warning: Prompt '{name_part}' found in multiple subdirectories: {sorted_dirs}. Using first match: {first}[/yellow]")` so the user knows which copy was picked. Use `rprint` (rich console), NOT `warnings.warn` — the latter dedups, can be silenced by warnings filters, and emits stack-trace-shaped output that's noisy in CLI context. Do not import `warnings` in this module just for collision notices.
 
-11. **`_auto_submit_example(basename: str, language: str, pdd_files: Dict[str, Path], ctx: click.Context) -> None`**:
-    - Skip if PDD_FORCE_LOCAL env var is truthy
-    - Skip if `CloudConfig.is_running_in_cloud()` returns True
-    - Before calling the lower-level async `get_jwt_token(...)`, call `CloudConfig.ensure_default_env()` so `PDD_CLOUD_URL` infers staging/prod/local before cached JWT audience validation. This prevents a prod cached JWT from being reused against a staging `submitExample` URL (#859 follow-up).
-    - Get JWT token via `asyncio.run(asyncio.wait_for(get_jwt_token(...), timeout=auth_timeout_s))`, with `auth_timeout_s` defensively parsed from `PDD_AUTO_SUBMIT_AUTH_TIMEOUT_S` (default `300.0`); on `asyncio.TimeoutError` / `TimeoutError`, log a yellow warning and return.
-    - Read and preprocess prompt file
-    - Build payload with prompt, code, example, test (if exists)
-    - POST to `CloudConfig.get_endpoint_url("submitExample")` (imported from `pdd.core.cloud`) so `PDD_CLOUD_URL` is honored for staging/prod/local — never hardcode the production `submitExample` URL (#859, Firebase audience mismatch under staging canary). The `requests.post` call MUST pass `timeout=get_cloud_request_timeout()` (imported from `pdd.core.cloud`) — this is the canonical pattern used by every other cloud POST site in the package; omitting `timeout=` lets `pdd sync` hang indefinitely when the upstream cloud stalls mid-response (bug #1272)
-    - Log success/failure (quiet mode respected)
+11. **_auto_submit_example**:
+    - Use the same opt-in, local/server guards, private metadata, and bounded request contract specified above.
 
 <examples>
    <sync_main_example>

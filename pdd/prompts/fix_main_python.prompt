@@ -134,14 +134,13 @@ Return `Tuple[bool, str, str, int, float, str]`:
    - In verbose mode, print only a short analysis preview and escape Rich markup safely when preview text is invalid.
 
 9. Auto-submit:
-   - Run only when `success` is true, `auto_submit` is true, `PDD_FORCE_LOCAL` is not enabled, and `CloudConfig.is_running_in_cloud()` is False. When skipped for the cloud reason, emit a yellow `Skipping example submission: cloud executor has no interactive auth path.` (subject to `quiet`).
-   - Before calling the lower-level async `get_jwt_token(...)`, call `CloudConfig.ensure_default_env()` so `PDD_CLOUD_URL` infers staging/prod/local before cached JWT audience validation. This prevents a prod cached JWT from being reused against a staging `submitExample` URL (#859 follow-up).
-   - Get a JWT with `asyncio.run(asyncio.wait_for(get_jwt_token(...), timeout=auth_timeout_s))` where `auth_timeout_s` is `float(os.environ.get('PDD_AUTO_SUBMIT_AUTH_TIMEOUT_S', '300'))` parsed defensively (`try/except (TypeError, ValueError)` falls back to `300.0`). On `asyncio.TimeoutError` / `TimeoutError`, emit a yellow warning (subject to `quiet`) and skip submission; do not propagate as a fix failure.
-   - Preprocess the prompt with `recursive=False` and `double_curly_brackets=True`.
-   - Submit to `CloudConfig.get_endpoint_url("submitExample")` (imported from `pdd.core.cloud`) so `PDD_CLOUD_URL` is honored for staging/prod/local — never hardcode the production `submitExample` URL (#859, Firebase audience mismatch under staging canary). The `requests.post` call MUST pass `timeout=get_cloud_request_timeout()` (imported from `pdd.core.cloud`) — every other cloud POST in this package uses the same helper, and omitting `timeout=` is a sibling copy-paste variant of the `pdd sync` hang documented in #1272.
-   - Include original prompt/code/test, optional error/example inputs, fixed code/test outputs, and analysis from `output_results` if readable, otherwise from in-memory `analysis_results`.
-   - Metadata should include a title/description, language from `get_language(os.path.splitext(code_file)[1])`, empty framework, tags `["auto-fix", "example"]`, `isPublic=True`, and `price=0.0`.
-   - Submission failures should be reported but must not change the main fix result.
+   - Require success, explicit auto_submit, configured server credentials, and absence of force-local/server execution.
+   - Skip when CloudConfig.is_running_in_cloud() is true.
+   - Read CloudConfig.get_jwt_token synchronously; initiate no authentication flow.
+   - Preprocess the prompt with recursive=false and double_curly_brackets=true.
+   - Submit to CloudConfig.get_endpoint_url("submitExample") with get_cloud_request_timeout().
+   - Include original inputs, fixed outputs, and available analysis. Set metadata.isPublic=false.
+   - Report request timeouts or submission failures without changing the fix result.
 
 9a. Compression and fallback metadata:
    - Expose whether agentic fallback was invoked or used so sync/evidence can record it.

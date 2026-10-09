@@ -39,7 +39,6 @@ dependencies = [
     "click==8.4.1",
     "cryptography>=46,<50",
     "firecrawl-py==4.28.0",
-    "firebase_admin==7.4.0",
     "httpx==0.28.1",
     "keyring==25.7.0",
     "keyrings.alt==5.0.2",
@@ -93,9 +92,10 @@ Issue-Tracker = "https://github.com/promptdriven/pdd/issues"
 pdd = "pdd.cli:cli"
 pdd-sync-checker = "pdd.sync_core.released_checker:main"
 pdd-sync-verify = "pdd.sync_core.certificate_verifier:main"
+pdd-cloud-server = "pdd.cloud_server.__main__:main"
 
 [tool.setuptools]
-packages = ["pdd", "pdd.commands", "pdd.core", "pdd.server", "pdd.server.routes", "pdd.sync_core"]
+packages = ["pdd", "pdd.commands", "pdd.core", "pdd.server", "pdd.server.routes", "pdd.sync_core", "pdd.cloud_server"]
 
 [tool.setuptools.package-data]
 "pdd" = [
@@ -129,8 +129,14 @@ dev = [
     "pytest-timeout",
     "pexpect>=4.9",
     "build",
-    "twine"
+    "twine",
+    "ruff",
+    "mypy"
 ]
+
+[tool.uv]
+required-version = ">=0.12"
+exclude-newer = "1 week"
 
 # Optional defaults for `pdd checkup simplify` (multi-provider harness).
 # [tool.pdd.checkup.simplify]

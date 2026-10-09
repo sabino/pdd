@@ -1,20 +1,29 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# PDD browser UI
 
-# Run and deploy your AI Studio app
+Use Bun from `.bun-version` to build the project UI and self-hosted dashboard.
+Provider credentials belong to the Python process, outside browser bundles.
 
-This contains everything you need to run your app locally.
+```sh
+bun ci
+bun --bun run build
+```
 
-View your app in AI Studio: https://ai.studio/apps/drive/1VW91g87OjbxDm6yS-SWlZz117H9p19O9
+`pdd connect` serves the generated `dist/` directory on port 9876.
+`pdd-cloud-server` serves its dashboard at `/cloud` or `/connect/{session_id}`.
+Build before packaging the Python wheel so its UI assets are included.
 
-## Run Locally
+For UI development:
 
-**Prerequisites:**  Node.js
+```sh
+bun --bun run dev
+bun --bun run test
+bun --bun run typecheck
+```
 
+Set `VITE_API_URL` to change the development proxy's project server.
+The project server discovers `PDD_CLOUD_URL` and configured bearer credentials.
+There is no implicit hosted service URL. The service dashboard uses its own origin.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+`typecheck` applies strict checks to the service UI and shared API.
+The legacy whole-project configuration has separate pre-existing type errors.
+See [self-hosting](../../docs/self-hosting.md) for startup and operator settings.

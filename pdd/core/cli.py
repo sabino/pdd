@@ -23,6 +23,7 @@ from ..install_completion import get_local_pdd_path
 from .errors import console, handle_error, clear_core_dump_errors, apply_color_preference
 from ..cli_status import GLYPHS as _STATUS_GLYPHS, Status as _Status
 from .utils import _first_pending_command, _should_show_onboarding_reminder
+from pdd.core.cloud import CloudConfig
 
 # Shared status glyphs (EPIC #1540, workstream 2) so the per-step execution
 # summary speaks the same SUCCESS/FAILURE vocabulary as every other command.
@@ -822,7 +823,7 @@ def cli(
     env_force_local = os.environ.get(
         "PDD_FORCE_LOCAL", ""
     ).strip().lower() in {"1", "true", "yes", "on"}
-    ctx.obj["local"] = bool(local or estimate_mode or env_force_local)
+    ctx.obj["local"] = bool(local or estimate_mode or env_force_local or not CloudConfig.is_cloud_enabled())
     # Propagate --local flag to environment for llm_invoke cloud detection
     if local or estimate_mode:
         os.environ['PDD_FORCE_LOCAL'] = '1'
@@ -939,7 +940,7 @@ def cli(
 
     # Perform auto-update check unless disabled
 
-    if not json_mode and not estimate_mode and os.getenv("PDD_AUTO_UPDATE", "true").lower() != "false":
+    if not json_mode and not estimate_mode and os.getenv("PDD_AUTO_UPDATE", "false").lower() != "false":
         try:
             if not quiet:
                 console.print("[info]Checking for updates...[/info]")

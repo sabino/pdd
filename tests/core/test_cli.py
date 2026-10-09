@@ -235,7 +235,7 @@ def test_cli_global_options_defaults(mock_construct, mock_main, mock_auto_update
     assert ctx.obj['verbose'] is False
     assert ctx.obj['quiet'] is False
     assert ctx.obj['output_cost'] is None
-    assert ctx.obj['local'] is False
+    assert ctx.obj['local'] is True
     assert ctx.obj['review_examples'] is False
     assert 'grounding_review_decisions' not in ctx.obj
     assert ctx.obj.get('compress_examples') is None
@@ -631,7 +631,7 @@ def test_apply_color_preference_env_and_shared_console():
 def test_apply_color_preference_updates_preexisting_command_consoles():
     """Module-level command consoles imported before the root callback must
     honor the later global ``--no-color`` preference."""
-    from pdd.commands.auth import console as auth_console
+    from pdd.commands.sessions import console as auth_console
     from pdd.cmd_test_main import console as test_console
     from pdd.core import errors
 
