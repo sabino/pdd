@@ -324,6 +324,35 @@ def test_chatgpt_generation_rejects_empty_responses_output(monkeypatch, output):
     completion.assert_not_called()
 
 
+@pytest.mark.parametrize("phase", ["final", "final_answer", None])
+def test_responses_text_selects_answer_after_progress(phase):
+    response = SimpleNamespace(output=[
+        SimpleNamespace(type="message", phase="commentary", content=[
+            SimpleNamespace(text="I will implement the module."),
+        ]),
+        SimpleNamespace(type="reasoning", content=[]),
+        SimpleNamespace(type="message", phase=phase, content=[
+            SimpleNamespace(text="export function hello() {"),
+            SimpleNamespace(text=None),
+            SimpleNamespace(text=" return 'hello'; }"),
+        ]),
+    ])
+    assert li._extract_responses_text(response) == "export function hello() { return 'hello'; }"
+
+
+def test_responses_text_prefers_final_over_later_commentary():
+    response = SimpleNamespace(output=[
+        SimpleNamespace(type="message", phase="final", content=[SimpleNamespace(text="code")]),
+        SimpleNamespace(type="message", phase="commentary", content=[SimpleNamespace(text="progress")]),
+        SimpleNamespace(type="message", phase="final", content=[SimpleNamespace(text=" \n")]),
+    ])
+    assert li._extract_responses_text(response) == "code"
+
+
+def test_responses_text_uses_output_text_when_messages_are_empty():
+    assert li._extract_responses_text(SimpleNamespace(output=[], output_text="fallback")) == "fallback"
+
+
 def test_chatgpt_generation_preserves_code_generator_multimodal_content(monkeypatch):
     """Code-generator text/image messages retain their image in Responses input."""
     monkeypatch.setenv("PDD_MODEL_DEFAULT", "chatgpt/gpt-5.3-codex")

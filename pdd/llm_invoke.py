@@ -595,6 +595,25 @@ class ProviderRefusalError(Exception):
     """
 
 
+def _extract_responses_text(response: Any) -> Optional[str]:
+    """Select the final answer instead of a Codex progress message."""
+    messages = []
+    for item in getattr(response, "output", None) or []:
+        if getattr(item, "type", None) != "message":
+            continue
+        parts = [getattr(part, "text", None) for part in getattr(item, "content", None) or []]
+        text = "".join(part for part in parts if isinstance(part, str))
+        if text.strip():
+            messages.append((getattr(item, "phase", None), text))
+    finals = [text for phase, text in messages if phase in {"final", "final_answer"}]
+    if finals:
+        return finals[-1]
+    if messages:
+        return messages[-1][1]
+    text = getattr(response, "output_text", None)
+    return text if isinstance(text, str) and text.strip() else None
+
+
 def _response_was_refused(response_item: Any) -> bool:
     """Return whether LiteLLM preserved Anthropic's refusal stop reason."""
     try:
@@ -6113,22 +6132,7 @@ def llm_invoke(
                         call_duration = time_module.time() - call_start
 
                         # Extract text result from response
-                        result_text = None
-                        try:
-                            # LiteLLM responses return output as a list of items
-                            for item in resp.output:
-                                if getattr(item, 'type', None) == 'message' and hasattr(item, 'content') and item.content:
-                                    for content_item in item.content:
-                                        if hasattr(content_item, 'text'):
-                                            result_text = content_item.text
-                                            break
-                                    if result_text:
-                                        break
-                        except Exception:
-                            result_text = None
-
-                        if not result_text:
-                            result_text = getattr(resp, "output_text", None)
+                        result_text = _extract_responses_text(resp)
                         if not isinstance(result_text, str) or not result_text.strip():
                             raise ValueError(
                                 "Responses API returned no non-empty text output"
