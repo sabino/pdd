@@ -1609,6 +1609,30 @@ def test_generate_tags_from_architecture_all_fields():
     assert '<pdd-dependency>dep2.prompt</pdd-dependency>' in tags
 
 
+def test_generated_tags_preserve_generic_signatures_and_xml_text():
+    arch_entry = {
+        "reason": "Read <notes> & preserve identity",
+        "interface": {
+            "type": "module",
+            "module": {
+                "functions": [{
+                    "name": "createNoteStore",
+                    "signature": "createNoteStore(): StoreApi<NoteStoreState>",
+                    "returns": "Notes & warnings",
+                }]
+            },
+        },
+        "dependencies": ["notes&storage.prompt"],
+    }
+
+    parsed = parse_prompt_tags(generate_tags_from_architecture(arch_entry))
+
+    assert parsed["reason"] == arch_entry["reason"]
+    assert parsed["interface"] == arch_entry["interface"]
+    assert parsed["dependencies"] == arch_entry["dependencies"]
+    assert "interface_parse_error" not in parsed
+
+
 def test_generate_tags_from_architecture_partial():
     """Test generating tags from partial architecture entry."""
     arch_entry = {

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Preserve generic type signatures and XML-sensitive text in generated prompt metadata so interface checks can run.
+
 ### Feat
 
 - **test**: add `pdd test --from-story <story>` to compile a story's sibling

@@ -16,6 +16,7 @@ import json
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from xml.sax.saxutils import escape
 
 from lxml import etree
 
@@ -2071,16 +2072,16 @@ def generate_tags_from_architecture(arch_entry: Dict[str, Any]) -> str:
 
     # Generate <pdd-reason> tag
     if arch_entry.get('reason'):
-        reason = arch_entry['reason']
+        reason = escape(arch_entry['reason'])
         tags.append(f"<pdd-reason>{reason}</pdd-reason>")
 
     # Generate <pdd-interface> tag (pretty-printed JSON)
     if arch_entry.get('interface'):
-        interface_json = json.dumps(arch_entry['interface'], indent=2)
+        interface_json = escape(json.dumps(arch_entry['interface'], indent=2))
         tags.append(f"<pdd-interface>\n{interface_json}\n</pdd-interface>")
 
     # Generate <pdd-dependency> tags (one per dependency)
     for dep in arch_entry.get('dependencies', []):
-        tags.append(f"<pdd-dependency>{dep}</pdd-dependency>")
+        tags.append(f"<pdd-dependency>{escape(dep)}</pdd-dependency>")
 
     return '\n'.join(tags)
